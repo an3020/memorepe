@@ -12,6 +12,7 @@ export default function EditarQuiz({ params }) {
   const [questions, setQuestions] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [csvStatus, setCsvStatus] = useState('')
 
   useEffect(() => {
     async function load() {
@@ -23,7 +24,6 @@ export default function EditarQuiz({ params }) {
         .select('*')
         .eq('id', id)
         .single()
-
       setQuiz(quizData)
 
       const { data: questionsData } = await supabase
@@ -83,6 +83,75 @@ export default function EditarQuiz({ params }) {
     setQuestions(questions.filter((_, i) => i !== qIndex))
   }
 
+  function parseCSVLine(line) {
+    const result = []
+    let current = ''
+    let inQuotes = false
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i]
+      if (char === '"') {
+        inQuotes = !inQuotes
+      } else if (char === ',' && !inQuotes) {
+        result.push(current)
+        current = ''
+      } else {
+        current += char
+      }
+    }
+    result.push(current)
+    return result
+  }
+
+  async function handleCSV(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    setCsvStatus('Procesando...')
+
+    const text = await file.text()
+    const lines = text.split('\n').filter(l => l.trim())
+    const newQuestions = []
+
+    for (let i = 1; i < lines.length; i++) {
+      const cols = parseCSVLine(lines[i])
+      if (!cols[0]) continue
+
+      const questionBody = cols[0]?.trim().replace(/^"|"$/g, '')
+      const opt1 = cols[1]?.trim().replace(/^"|"$/g, '')
+      const opt2 = cols[2]?.trim().replace(/^"|"$/g, '')
+      const opt3 = cols[3]?.trim().replace(/^"|"$/g, '')
+      const opt4 = cols[4]?.trim().replace(/^"|"$/g, '')
+      const correctasRaw = cols[5]?.trim().replace(/^"|"$/g, '')
+      const explanation = cols[6]?.trim().replace(/^"|"$/g, '') || ''
+
+      if (!questionBody || !opt1) continue
+
+      const allOpts = [opt1, opt2, opt3, opt4].filter(Boolean)
+
+      let correctIndexes = [0]
+      if (correctasRaw) {
+        correctIndexes = correctasRaw.split(',').map(n => parseInt(n.trim()) - 1).filter(n => !isNaN(n))
+      }
+
+      const options = allOpts.map((body, idx) => ({
+        id: 'opt_' + Date.now() + '_' + i + '_' + idx,
+        body,
+        is_correct: correctIndexes.includes(idx)
+      }))
+
+      newQuestions.push({
+        id: 'new_' + Date.now() + '_' + i,
+        body: questionBody,
+        type: correctIndexes.length > 1 ? 'multiple' : 'single',
+        explanation,
+        options,
+        isNew: true
+      })
+    }
+
+    setQuestions(prev => [...prev, ...newQuestions])
+    setCsvStatus(newQuestions.length + ' preguntas importadas')
+  }
+
   async function saveAll() {
     setSaving(true)
     for (const q of questions) {
@@ -118,7 +187,7 @@ export default function EditarQuiz({ params }) {
       .eq('id', quizId)
 
     setSaving(false)
-    router.push(`/quiz/${quizId}/publicado`)
+    router.push('/quiz/' + quizId + '/publicado')
   }
 
   const input = {
@@ -138,7 +207,6 @@ export default function EditarQuiz({ params }) {
   return (
     <div style={{ minHeight: '100vh', background: 'white', fontFamily: 'Arial, sans-serif' }}>
 
-      {/* Nav */}
       <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 24px', borderBottom: '1px solid #f0f0f0', position: 'sticky', top: 0, background: 'white', zIndex: 10 }}>
         <div style={{ fontSize: '16px', fontWeight: '500' }}>
           memo<span style={{ color: '#059669' }}>repe</span>
@@ -164,16 +232,34 @@ export default function EditarQuiz({ params }) {
 
       <div style={{ maxWidth: '680px', margin: '0 auto', padding: '32px 24px' }}>
 
-        {/* Importar CSV */}
-        <div style={{ border: '1px dashed #e5e7eb', borderRadius: '12px', padding: '20px', textAlign: 'center', marginBottom: '24px' }}>
+        <div style={{ border: '1px dashed #e5e7eb', borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
           <p style={{ fontSize: '13px', fontWeight: '500', color: '#111', marginBottom: '4px' }}>Importar desde CSV</p>
-          <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '12px' }}>Subí un archivo CSV con tus preguntas y se cargan automáticamente.</p>
-          <button style={{ padding: '7px 16px', fontSize: '12px', color: '#059669', background: '#d1fae5', border: '1px solid #6ee7b7', borderRadius: '8px', cursor: 'pointer' }}>
-            Subir CSV
-          </button>
+          <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '12px' }}>
+            El CSV debe tener estas columnas: <strong>question, option1, option2, option3, option4, correctas, explicacion</strong><br />
+            En "correctas" ponés los números de las opciones correctas separados por coma. Ej: <strong>1</strong> o <strong>1,3,4</strong>. Si lo dejás vacío, la opción 1 es la correcta.
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <input
+              type="file"
+              accept=".csv"
+              id="csv-input"
+              style={{ display: 'none' }}
+              onChange={handleCSV}
+            />
+            <label
+              htmlFor="csv-input"
+              style={{ padding: '7px 16px', fontSize: '12px', color: '#059669', background: '#d1fae5', border: '1px solid #6ee7b7', borderRadius: '8px', cursor: 'pointer', display: 'inline-block' }}
+            >
+              Subir CSV
+            </label>
+            {csvStatus && (
+              <span style={{ fontSize: '12px', color: csvStatus.includes('Error') ? '#ef4444' : '#059669' }}>
+                {csvStatus}
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* Preguntas */}
         {questions.map((q, qIndex) => (
           <div key={q.id} style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '16px', marginBottom: '12px' }}>
 
@@ -234,7 +320,7 @@ export default function EditarQuiz({ params }) {
                   />
                   <input
                     style={{ ...input }}
-                    placeholder={`Opción ${oIndex + 1}${oIndex === 0 ? ' (correcta por defecto)' : ''}`}
+                    placeholder={'Opción ' + (oIndex + 1)}
                     value={opt.body}
                     onChange={(e) => updateOption(qIndex, oIndex, 'body', e.target.value)}
                   />
@@ -253,7 +339,8 @@ export default function EditarQuiz({ params }) {
 
             <div>
               <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '4px' }}>
-                Explicación didáctica <span style={{ background: '#fef3c7', color: '#92400e', padding: '1px 6px', borderRadius: '4px', fontSize: '10px' }}>Opcional</span>
+                Explicación didáctica{' '}
+                <span style={{ background: '#fef3c7', color: '#92400e', padding: '1px 6px', borderRadius: '4px', fontSize: '10px' }}>Opcional</span>
               </div>
               <textarea
                 style={{ ...input, minHeight: '48px', resize: 'vertical', background: '#f9fafb' }}
@@ -266,7 +353,6 @@ export default function EditarQuiz({ params }) {
           </div>
         ))}
 
-        {/* Agregar pregunta */}
         <button
           onClick={addQuestion}
           style={{ width: '100%', padding: '12px', fontSize: '13px', fontWeight: '500', color: '#059669', background: '#f0fdf4', border: '1px dashed #6ee7b7', borderRadius: '12px', cursor: 'pointer' }}
