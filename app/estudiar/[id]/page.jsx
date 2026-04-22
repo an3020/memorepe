@@ -40,6 +40,11 @@ function EstudiarInner({ params }) {
   const [userId, setUserId] = useState(null)
   const [showExitConfirm, setShowExitConfirm] = useState(false)
   const [modoN, setModoN] = useState(null)
+  const [showReport, setShowReport] = useState(false)
+  const [reportReason, setReportReason] = useState('')
+  const [reportComment, setReportComment] = useState('')
+  const [reportSent, setReportSent] = useState(false)
+  const [reportSending, setReportSending] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -194,6 +199,7 @@ function EstudiarInner({ params }) {
       setCurrent(prev => prev + 1)
       setSelected([])
       setConfirmed(false)
+      setReportSent(false)
     }
   }
 
@@ -206,27 +212,39 @@ function EstudiarInner({ params }) {
     const limite = modoN && modoN !== 'all' ? parseInt(modoN) : null
     const doneIds = new Set(questions.map(q => q.id))
     const remaining = allQuestions.filter(q => !doneIds.has(q.id))
-
-    if (remaining.length === 0) {
-      router.push('/dashboard')
-      return
-    }
-
+    if (remaining.length === 0) { router.push('/dashboard'); return }
     const nextBatch = limite ? remaining.slice(0, limite) : remaining
-
     const { data: sess } = await supabase
       .from('study_sessions')
       .insert({ user_id: userId, quiz_id: quizId, total_questions: nextBatch.length })
       .select()
       .single()
     if (sess) setSessionId(sess.id)
-
     setQuestions(nextBatch)
     setCurrent(0)
     setSelected([])
     setConfirmed(false)
     setSession({ correct: 0, wrong: 0, partial: 0 })
     setFinished(false)
+    setReportSent(false)
+  }
+
+  async function sendReport() {
+    if (!reportReason) return
+    setReportSending(true)
+    const q = questions[current]
+    await supabase.from('question_reports').insert({
+      question_id: q.id,
+      quiz_id: quizId,
+      user_id: userId,
+      reason: reportReason,
+      comment: reportComment || null,
+    })
+    setReportSending(false)
+    setShowReport(false)
+    setReportReason('')
+    setReportComment('')
+    setReportSent(true)
   }
 
   function getOptionStyle(opt) {
@@ -270,7 +288,6 @@ function EstudiarInner({ params }) {
           <div style={{ fontSize: '48px', marginBottom: '16px' }}>{pct >= 80 ? '🎯' : pct >= 50 ? '📈' : '💪'}</div>
           <h1 style={{ fontSize: '22px', fontWeight: '500', color: '#111', marginBottom: '4px' }}>{modoNombre} completado</h1>
           <p style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '28px' }}>{quiz?.title} · {total} preguntas</p>
-
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '16px' }}>
             <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '14px' }}>
               <div style={{ fontSize: '24px', fontWeight: '500', color: '#059669' }}>{session.correct}</div>
@@ -285,7 +302,6 @@ function EstudiarInner({ params }) {
               <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>Parciales</div>
             </div>
           </div>
-
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '28px' }}>
             <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '12px' }}>
               <div style={{ fontSize: '18px', fontWeight: '500', color: '#111' }}>{pct}%</div>
@@ -296,26 +312,16 @@ function EstudiarInner({ params }) {
               <div style={{ fontSize: '11px', color: '#059669' }}>Ganados</div>
             </div>
           </div>
-
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {hasMas && limite && (
-              <button
-                onClick={continuar}
-                style={{ padding: '12px', fontSize: '14px', fontWeight: '500', color: 'white', background: '#059669', border: 'none', borderRadius: '10px', cursor: 'pointer' }}
-              >
+              <button onClick={continuar} style={{ padding: '12px', fontSize: '14px', fontWeight: '500', color: 'white', background: '#059669', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>
                 Continuar con otras {Math.min(limite, remaining.length)} preguntas
               </button>
             )}
-            <a
-              href={'/estudiar/' + quizId + '/inicio'}
-              style={{ display: 'block', padding: '12px', fontSize: '14px', color: '#374151', background: '#f3f4f6', borderRadius: '10px', textDecoration: 'none' }}
-            >
+            <a href={'/estudiar/' + quizId + '/inicio'} style={{ display: 'block', padding: '12px', fontSize: '14px', color: '#374151', background: '#f3f4f6', borderRadius: '10px', textDecoration: 'none' }}>
               Cambiar modo de estudio
             </a>
-            <a
-              href="/dashboard"
-              style={{ display: 'block', padding: '12px', fontSize: '14px', color: '#9ca3af', textDecoration: 'none' }}
-            >
+            <a href="/dashboard" style={{ display: 'block', padding: '12px', fontSize: '14px', color: '#9ca3af', textDecoration: 'none' }}>
               Ir al dashboard
             </a>
           </div>
@@ -332,6 +338,53 @@ function EstudiarInner({ params }) {
 
   return (
     <div style={{ minHeight: '100vh', background: 'white', fontFamily: 'Arial, sans-serif' }}>
+
+      {showReport && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <div style={{ background: 'white', borderRadius: '16px', padding: '24px', maxWidth: '380px', width: '90%' }}>
+            <p style={{ fontSize: '15px', fontWeight: '500', color: '#111', marginBottom: '4px' }}>Reportar error en esta pregunta</p>
+            <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '16px' }}>Tu reporte le llega al autor del quiz.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
+              {[
+                'La respuesta correcta esta mal',
+                'Falta una opcion correcta',
+                'La pregunta esta mal redactada',
+                'La explicacion es incorrecta',
+                'Otro',
+              ].map(r => (
+                <button
+                  key={r}
+                  onClick={() => setReportReason(r)}
+                  style={{ padding: '10px 14px', fontSize: '13px', border: '1px solid', borderColor: reportReason === r ? '#059669' : '#e5e7eb', borderRadius: '8px', background: reportReason === r ? '#f0fdf4' : 'white', color: reportReason === r ? '#065f46' : '#374151', textAlign: 'left', cursor: 'pointer', fontWeight: reportReason === r ? '500' : '400' }}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+            <textarea
+              placeholder="Comentario adicional (opcional)"
+              value={reportComment}
+              onChange={e => setReportComment(e.target.value)}
+              style={{ width: '100%', padding: '8px 12px', fontSize: '13px', border: '1px solid #e5e7eb', borderRadius: '8px', fontFamily: 'Arial, sans-serif', minHeight: '60px', resize: 'vertical', boxSizing: 'border-box', marginBottom: '14px' }}
+            />
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={sendReport}
+                disabled={!reportReason || reportSending}
+                style={{ flex: 1, padding: '10px', fontSize: '13px', fontWeight: '500', color: 'white', background: !reportReason || reportSending ? '#9ca3af' : '#059669', border: 'none', borderRadius: '8px', cursor: !reportReason || reportSending ? 'not-allowed' : 'pointer' }}
+              >
+                {reportSending ? 'Enviando...' : 'Enviar reporte'}
+              </button>
+              <button
+                onClick={() => { setShowReport(false); setReportReason(''); setReportComment('') }}
+                style={{ flex: 1, padding: '10px', fontSize: '13px', color: '#6b7280', background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', cursor: 'pointer' }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showExitConfirm && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
@@ -433,13 +486,27 @@ function EstudiarInner({ params }) {
               )}
             </div>
             <button
-              style={{ width: '100%', padding: '12px', fontSize: '14px', color: '#6b7280', background: 'white', border: '1px solid #e5e7eb', borderRadius: '10px', cursor: 'pointer' }}
+              style={{ width: '100%', padding: '12px', fontSize: '14px', color: '#6b7280', background: 'white', border: '1px solid #e5e7eb', borderRadius: '10px', cursor: 'pointer', marginBottom: '8px' }}
               onClick={next}
             >
               {current + 1 >= questions.length ? 'Ver resultados' : 'Siguiente pregunta'}
             </button>
           </>
         )}
+
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '8px' }}>
+          {reportSent ? (
+            <span style={{ fontSize: '12px', color: '#059669' }}>Reporte enviado. Gracias.</span>
+          ) : (
+            <button
+              onClick={() => setShowReport(true)}
+              style={{ fontSize: '11px', color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+            >
+              Reportar error en esta pregunta
+            </button>
+          )}
+        </div>
+
       </div>
     </div>
   )
