@@ -168,7 +168,7 @@ export default async function Dashboard() {
                 <a href={'/quiz/' + quiz.id + '/gestionar'} style={{ fontSize: '11px', color: '#6b7280', textDecoration: 'none', border: '1px solid #e5e7eb', padding: '5px 10px', borderRadius: '6px' }}>
                   Gestionar
                 </a>
-                <a href={'/estudiar/' + quiz.id} style={{ fontSize: '12px', fontWeight: '500', color: '#065f46', background: '#d1fae5', border: '1px solid #6ee7b7', padding: '5px 12px', borderRadius: '6px', textDecoration: 'none' }}>
+                <a href={'/estudiar/' + quiz.id + '/inicio'} style={{ fontSize: '12px', fontWeight: '500', color: '#065f46', background: '#d1fae5', border: '1px solid #6ee7b7', padding: '5px 12px', borderRadius: '6px', textDecoration: 'none' }}>
                   Estudiar
                 </a>
               </div>

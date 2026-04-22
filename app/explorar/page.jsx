@@ -156,7 +156,7 @@ export default async function Explorar({ searchParams }) {
                     <span style={{ fontSize: '11px', color: '#9ca3af' }}>
                       {new Date(quiz.created_at).toLocaleDateString('es-AR')}
                     </span>
-                    <a href={'/estudiar/' + quiz.id} style={{ fontSize: '12px', fontWeight: '500', color: '#065f46', background: '#d1fae5', border: '1px solid #6ee7b7', padding: '5px 12px', borderRadius: '6px', textDecoration: 'none' }}>
+                    <a href={'/estudiar/' + quiz.id + '/inicio'} style={{ fontSize: '12px', fontWeight: '500', color: '#065f46', background: '#d1fae5', border: '1px solid #6ee7b7', padding: '5px 12px', borderRadius: '6px', textDecoration: 'none' }}>
                       Estudiar
                     </a>
                   </div>
