@@ -1,95 +1,82 @@
-import Link from 'next/link'
+import type { FC } from 'react'
 import LoginButton from './components/LoginButton'
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-white">
+    <div style={{ minHeight: '100vh', background: 'white', fontFamily: 'Arial, sans-serif' }}>
 
-      {/* Nav */}
-      <nav className="flex justify-between items-center px-6 py-4 border-b border-gray-100">
-        <div className="text-lg font-medium tracking-tight">
-          memo<span className="text-emerald-600">repe</span>
+      <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid #f0f0f0' }}>
+        <div style={{ fontSize: '18px', fontWeight: '500', letterSpacing: '-0.5px' }}>
+          memo<span style={{ color: '#059669' }}>repe</span>
         </div>
-        <div className="flex gap-3 items-center">
-          <span className="text-sm text-gray-500 cursor-pointer">Explorar</span>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <a href="/explorar" style={{ fontSize: '13px', color: '#9ca3af', textDecoration: 'none', cursor: 'pointer' }}>Explorar</a>
           <LoginButton />
         </div>
       </nav>
 
-      {/* Hero */}
-      <section className="max-w-2xl mx-auto px-6 py-20 text-center">
-        <h1 className="text-5xl font-medium tracking-tight text-gray-900 leading-tight mb-4">
-          Estudiá menos.<br />
-          <span className="text-emerald-600">Aprendé más.</span>
+      <section style={{ maxWidth: '640px', margin: '0 auto', padding: '80px 24px', textAlign: 'center' }}>
+        <h1 style={{ fontSize: '48px', fontWeight: '500', letterSpacing: '-1px', color: '#111', lineHeight: '1.15', marginBottom: '16px' }}>
+          Estudia menos.<br />
+          <span style={{ color: '#059669' }}>Aprende mas.</span>
         </h1>
-        <p className="text-lg text-gray-500 mb-10 leading-relaxed">
-          Memorepe usa repetición espaciada para mostrarte exactamente lo que necesitás repasar, justo cuando lo necesitás.
+        <p style={{ fontSize: '17px', color: '#6b7280', marginBottom: '40px', lineHeight: '1.6' }}>
+          Memorepe usa repeticion espaciada para mostrarte exactamente lo que necesitas repasar, justo cuando lo necesitas.
         </p>
-        <div className="flex gap-3 justify-center">
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
           <LoginButton label="Empezar gratis con Google" primary />
-          <button className="px-5 py-2.5 text-sm text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50">
+          <a href="/explorar" style={{ padding: '10px 20px', fontSize: '14px', color: '#6b7280', border: '1px solid #e5e7eb', borderRadius: '8px', textDecoration: 'none' }}>
             Explorar quizzes
-          </button>
+          </a>
         </div>
       </section>
 
-      {/* Stats */}
-      <section className="grid grid-cols-3 mx-6 border border-gray-100 rounded-xl overflow-hidden mb-16">
-        <div className="py-6 text-center border-r border-gray-100">
-          <div className="text-2xl font-medium text-gray-900">12.4k</div>
-          <div className="text-xs text-gray-400 mt-1">Quizzes públicos</div>
+      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', margin: '0 24px 64px', border: '1px solid #f0f0f0', borderRadius: '12px', overflow: 'hidden' }}>
+        <div style={{ padding: '24px', textAlign: 'center', borderRight: '1px solid #f0f0f0' }}>
+          <div style={{ fontSize: '24px', fontWeight: '500', color: '#111' }}>1.247</div>
+          <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>Quizzes publicos</div>
         </div>
-        <div className="py-6 text-center border-r border-gray-100">
-          <div className="text-2xl font-medium text-gray-900">84k</div>
-          <div className="text-xs text-gray-400 mt-1">Estudiantes</div>
+        <div style={{ padding: '24px', textAlign: 'center', borderRight: '1px solid #f0f0f0' }}>
+          <div style={{ fontSize: '24px', fontWeight: '500', color: '#111' }}>3.891</div>
+          <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>Estudiantes</div>
         </div>
-        <div className="py-6 text-center">
-          <div className="text-2xl font-medium text-gray-900">2.1M</div>
-          <div className="text-xs text-gray-400 mt-1">Preguntas respondidas</div>
-        </div>
-      </section>
-
-      {/* Features */}
-      <section className="max-w-2xl mx-auto px-6 mb-20">
-        <p className="text-xs font-medium text-emerald-600 uppercase tracking-wider mb-2">Por qué Memorepe</p>
-        <h2 className="text-2xl font-medium text-gray-900 mb-2">No es un testeador. Es un sistema de aprendizaje.</h2>
-        <p className="text-gray-500 text-sm mb-8">La diferencia está en qué pasa después de que respondés.</p>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="border border-gray-100 rounded-xl p-5">
-            <div className="w-8 h-8 bg-emerald-50 rounded-lg mb-3"></div>
-            <h3 className="text-sm font-medium text-gray-900 mb-1">Repetición espaciada</h3>
-            <p className="text-xs text-gray-400 leading-relaxed">El algoritmo decide qué repasar hoy según tu historial.</p>
-          </div>
-          <div className="border border-gray-100 rounded-xl p-5">
-            <div className="w-8 h-8 bg-emerald-50 rounded-lg mb-3"></div>
-            <h3 className="text-sm font-medium text-gray-900 mb-1">Tu progreso real</h3>
-            <p className="text-xs text-gray-400 leading-relaxed">Sabés exactamente qué dominás y qué necesitás reforzar.</p>
-          </div>
-          <div className="border border-gray-100 rounded-xl p-5">
-            <div className="w-8 h-8 bg-emerald-50 rounded-lg mb-3"></div>
-            <h3 className="text-sm font-medium text-gray-900 mb-1">Comunidad</h3>
-            <p className="text-xs text-gray-400 leading-relaxed">Miles de quizzes creados por estudiantes como vos.</p>
-          </div>
-          <div className="border border-gray-100 rounded-xl p-5">
-            <div className="w-8 h-8 bg-emerald-50 rounded-lg mb-3"></div>
-            <h3 className="text-sm font-medium text-gray-900 mb-1">Logros y rachas</h3>
-            <p className="text-xs text-gray-400 leading-relaxed">XP, niveles y logros que reflejan tu aprendizaje real.</p>
-          </div>
+        <div style={{ padding: '24px', textAlign: 'center' }}>
+          <div style={{ fontSize: '24px', fontWeight: '500', color: '#111' }}>84.329</div>
+          <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>Preguntas respondidas</div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-gray-100 px-6 py-5 flex justify-between items-center">
-        <div className="text-sm font-medium text-gray-400">
-          memo<span className="text-emerald-500">repe</span>
+      <section style={{ maxWidth: '640px', margin: '0 auto', padding: '0 24px 80px' }}>
+        <p style={{ fontSize: '11px', fontWeight: '500', color: '#059669', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>Por que Memorepe</p>
+        <h2 style={{ fontSize: '24px', fontWeight: '500', color: '#111', marginBottom: '8px' }}>No es un testeador. Es un sistema de aprendizaje.</h2>
+        <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '32px' }}>La diferencia esta en que pasa despues de que respondes.</p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          {[
+            { titulo: 'Repeticion espaciada', desc: 'El algoritmo decide que repasar hoy segun tu historial personal.' },
+            { titulo: 'Tu progreso real', desc: 'Sabes exactamente que dominas y que necesitas reforzar.' },
+            { titulo: 'Comunidad', desc: 'Miles de quizzes creados por estudiantes como vos.' },
+            { titulo: 'Logros y rachas', desc: 'XP, niveles y logros que reflejan tu aprendizaje real.' },
+          ].map(f => (
+            <div key={f.titulo} style={{ border: '1px solid #f0f0f0', borderRadius: '12px', padding: '20px' }}>
+              <div style={{ width: '32px', height: '32px', background: '#f0fdf4', borderRadius: '8px', marginBottom: '12px' }} />
+              <h3 style={{ fontSize: '14px', fontWeight: '500', color: '#111', marginBottom: '4px' }}>{f.titulo}</h3>
+              <p style={{ fontSize: '12px', color: '#9ca3af', lineHeight: '1.5' }}>{f.desc}</p>
+            </div>
+          ))}
         </div>
-        <div className="flex gap-4 text-xs text-gray-300">
-          <span>Términos</span>
-          <span>Privacidad</span>
-          <span>Contacto</span>
+      </section>
+
+      <footer style={{ borderTop: '1px solid #f0f0f0', padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ fontSize: '14px', fontWeight: '500', color: '#9ca3af' }}>
+          memo<span style={{ color: '#059669' }}>repe</span>
+        </div>
+        <div style={{ display: 'flex', gap: '16px' }}>
+          <span style={{ fontSize: '12px', color: '#d1d5db', cursor: 'pointer' }}>Terminos</span>
+          <span style={{ fontSize: '12px', color: '#d1d5db', cursor: 'pointer' }}>Privacidad</span>
+          <span style={{ fontSize: '12px', color: '#d1d5db', cursor: 'pointer' }}>Contacto</span>
         </div>
       </footer>
 
-    </main>
+    </div>
   )
 }
