@@ -11,6 +11,7 @@ export default function GestionarQuiz({ params }) {
   const [quizId, setQuizId] = useState(null)
   const [quiz, setQuiz] = useState(null)
   const [questions, setQuestions] = useState([])
+  const [reports, setReports] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showDeleteQuiz, setShowDeleteQuiz] = useState(false)
@@ -55,6 +56,14 @@ export default function GestionarQuiz({ params }) {
         .order('order')
 
       setQuestions(questionsData || [])
+
+      const { data: reportsData } = await supabase
+        .from('question_reports')
+        .select('*, questions(body)')
+        .eq('quiz_id', id)
+        .order('created_at', { ascending: false })
+
+      setReports(reportsData || [])
       setLoading(false)
     }
     load()
@@ -97,6 +106,17 @@ export default function GestionarQuiz({ params }) {
     await supabase.from('quizzes').delete().eq('id', quizId)
     router.push('/dashboard')
   }
+
+  async function resolveReport(reportId) {
+    await supabase
+      .from('question_reports')
+      .update({ status: 'resolved' })
+      .eq('id', reportId)
+    setReports(reports.map(r => r.id === reportId ? { ...r, status: 'resolved' } : r))
+  }
+
+  const pendingReports = reports.filter(r => r.status === 'pending')
+  const resolvedReports = reports.filter(r => r.status === 'resolved')
 
   const input = {
     width: '100%',
@@ -157,7 +177,7 @@ export default function GestionarQuiz({ params }) {
           <a href="/dashboard" style={{ padding: '7px 14px', fontSize: '13px', color: '#6b7280', background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', textDecoration: 'none' }}>
             Volver al dashboard
           </a>
-          <a href={'/estudiar/' + quizId} style={{ padding: '7px 14px', fontSize: '13px', fontWeight: '500', color: 'white', background: '#059669', border: 'none', borderRadius: '8px', textDecoration: 'none' }}>
+          <a href={'/estudiar/' + quizId + '/inicio'} style={{ padding: '7px 14px', fontSize: '13px', fontWeight: '500', color: 'white', background: '#059669', border: 'none', borderRadius: '8px', textDecoration: 'none' }}>
             Estudiar
           </a>
         </div>
@@ -168,7 +188,9 @@ export default function GestionarQuiz({ params }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '28px' }}>
           <div>
             <h1 style={{ fontSize: '20px', fontWeight: '500', color: '#111', marginBottom: '4px' }}>{quiz.title}</h1>
-            <p style={{ fontSize: '13px', color: '#9ca3af' }}>{questions.length} preguntas · creado el {new Date(quiz.created_at).toLocaleDateString('es-AR')}</p>
+            <p style={{ fontSize: '13px', color: '#9ca3af' }}>
+              {questions.length} preguntas · creado el {new Date(quiz.created_at).toLocaleDateString('es-AR')}
+            </p>
           </div>
           <button
             onClick={() => setShowDeleteQuiz(true)}
@@ -181,6 +203,38 @@ export default function GestionarQuiz({ params }) {
         {msg && (
           <div style={{ background: '#f0fdf4', border: '1px solid #6ee7b7', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#065f46', marginBottom: '20px' }}>
             {msg}
+          </div>
+        )}
+
+        {pendingReports.length > 0 && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '16px', marginBottom: '24px' }}>
+            <div style={{ fontSize: '13px', fontWeight: '500', color: '#b91c1c', marginBottom: '12px' }}>
+              {pendingReports.length} reporte{pendingReports.length > 1 ? 's' : ''} pendiente{pendingReports.length > 1 ? 's' : ''}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {pendingReports.map(r => (
+                <div key={r.id} style={{ background: 'white', borderRadius: '8px', padding: '12px 14px', border: '1px solid #fecaca' }}>
+                  <div style={{ fontSize: '12px', fontWeight: '500', color: '#b91c1c', marginBottom: '4px' }}>{r.reason}</div>
+                  {r.comment && (
+                    <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '6px' }}>{r.comment}</div>
+                  )}
+                  <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '8px' }}>
+                    Pregunta: {r.questions?.body?.slice(0, 80)}{r.questions?.body?.length > 80 ? '...' : ''}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '11px', color: '#9ca3af' }}>
+                      {new Date(r.created_at).toLocaleDateString('es-AR')}
+                    </span>
+                    <button
+                      onClick={() => resolveReport(r.id)}
+                      style={{ fontSize: '11px', color: '#065f46', background: '#d1fae5', border: '1px solid #6ee7b7', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer' }}
+                    >
+                      Marcar como resuelto
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -285,38 +339,65 @@ export default function GestionarQuiz({ params }) {
             </a>
           </div>
 
-          {questions.map((q, idx) => (
-            <div key={q.id} style={{ border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px 16px', marginBottom: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '4px' }}>
-                    {idx + 1} · {q.type === 'single' ? 'Una correcta' : 'Multiple correcta'}
-                  </div>
-                  <div style={{ fontSize: '13px', color: '#111', lineHeight: '1.4', marginBottom: '6px' }}>{q.body}</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                    {q.options?.map(opt => (
-                      <div key={opt.id} style={{ fontSize: '12px', color: opt.is_correct ? '#059669' : '#9ca3af', display: 'flex', gap: '6px', alignItems: 'center' }}>
-                        <span>{opt.is_correct ? '✓' : '·'}</span>
-                        <span>{opt.body}</span>
-                      </div>
-                    ))}
-                  </div>
-                  {q.explanation && (
-                    <div style={{ fontSize: '11px', color: '#6b7280', background: '#fffbeb', borderRadius: '6px', padding: '6px 8px', marginTop: '8px' }}>
-                      {q.explanation}
+          {questions.map((q, idx) => {
+            const qReports = reports.filter(r => r.question_id === q.id && r.status === 'pending')
+            return (
+              <div key={q.id} style={{ border: '1px solid', borderColor: qReports.length > 0 ? '#fecaca' : '#e5e7eb', borderRadius: '10px', padding: '12px 16px', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '4px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <span>{idx + 1} · {q.type === 'single' ? 'Una correcta' : 'Multiple correcta'}</span>
+                      {qReports.length > 0 && (
+                        <span style={{ fontSize: '10px', background: '#fef2f2', color: '#b91c1c', padding: '1px 6px', borderRadius: '4px', fontWeight: '500' }}>
+                          {qReports.length} reporte{qReports.length > 1 ? 's' : ''}
+                        </span>
+                      )}
                     </div>
-                  )}
+                    <div style={{ fontSize: '13px', color: '#111', lineHeight: '1.4', marginBottom: '6px' }}>{q.body}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      {q.options?.map(opt => (
+                        <div key={opt.id} style={{ fontSize: '12px', color: opt.is_correct ? '#059669' : '#9ca3af', display: 'flex', gap: '6px', alignItems: 'center' }}>
+                          <span>{opt.is_correct ? '✓' : '·'}</span>
+                          <span>{opt.body}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {q.explanation && (
+                      <div style={{ fontSize: '11px', color: '#6b7280', background: '#fffbeb', borderRadius: '6px', padding: '6px 8px', marginTop: '8px' }}>
+                        {q.explanation}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setDeleteQuestionId(q.id)}
+                    style={{ fontSize: '11px', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, padding: '4px' }}
+                  >
+                    Eliminar
+                  </button>
                 </div>
-                <button
-                  onClick={() => setDeleteQuestionId(q.id)}
-                  style={{ fontSize: '11px', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, padding: '4px' }}
-                >
-                  Eliminar
-                </button>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
+
+        {resolvedReports.length > 0 && (
+          <div style={{ marginTop: '24px' }}>
+            <div style={{ fontSize: '13px', fontWeight: '500', color: '#9ca3af', marginBottom: '10px' }}>
+              Reportes resueltos ({resolvedReports.length})
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {resolvedReports.map(r => (
+                <div key={r.id} style={{ background: '#f9fafb', borderRadius: '8px', padding: '10px 14px', border: '1px solid #e5e7eb', opacity: 0.6 }}>
+                  <div style={{ fontSize: '12px', color: '#374151', marginBottom: '2px' }}>{r.reason}</div>
+                  {r.comment && <div style={{ fontSize: '11px', color: '#6b7280' }}>{r.comment}</div>}
+                  <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '4px' }}>
+                    {new Date(r.created_at).toLocaleDateString('es-AR')} · Resuelto
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
       </div>
     </div>
