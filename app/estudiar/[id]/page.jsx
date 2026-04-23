@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
+import LoadingScreen from '@/app/components/LoadingScreen'
 
 function sm2(quality, repetitions, easiness, interval) {
   if (quality >= 3) {
@@ -237,7 +238,8 @@ function EstudiarInner({ params }) {
     return { ...base, ...shape, borderColor: '#d1d5db', background: 'white' }
   }
 
-  if (loading || questions.length === 0) return <div style={{ padding: '40px', fontFamily: 'Arial' }}>Cargando...</div>
+  if (loading) return <LoadingScreen />
+  if (questions.length === 0) return <div style={{ padding: '40px', fontFamily: 'Arial', textAlign: 'center', color: '#9ca3af' }}>Este quiz no tiene preguntas todavía.</div>
 
   const modoNombres = { '10': 'Calentamiento', '30': 'Sesion express', '50': 'Sesion completa', '100': 'Maraton', 'all': 'Repaso total' }
   const modoNombre = modoNombres[modoN] || 'Sesion'
