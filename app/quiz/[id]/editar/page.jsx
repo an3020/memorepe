@@ -120,12 +120,13 @@ export default function EditarQuiz({ params }) {
       const opt2 = cols[2]?.trim().replace(/^"|"$/g, '')
       const opt3 = cols[3]?.trim().replace(/^"|"$/g, '')
       const opt4 = cols[4]?.trim().replace(/^"|"$/g, '')
-      const correctasRaw = cols[5]?.trim().replace(/^"|"$/g, '')
-      const explanation = cols[6]?.trim().replace(/^"|"$/g, '') || ''
+      const opt5 = cols[5]?.trim().replace(/^"|"$/g, '')
+      const correctasRaw = cols[6]?.trim().replace(/^"|"$/g, '')
+      const explanation = cols[7]?.trim().replace(/^"|"$/g, '') || ''
 
       if (!questionBody || !opt1) continue
 
-      const allOpts = [opt1, opt2, opt3, opt4].filter(Boolean)
+      const allOpts = [opt1, opt2, opt3, opt4, opt5].filter(Boolean)
 
       let correctIndexes = [0]
       if (correctasRaw) {
