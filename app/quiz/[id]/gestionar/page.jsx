@@ -342,7 +342,7 @@ export default function GestionarQuiz({ params }) {
         <div style={{ marginBottom: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <div style={{ fontSize: '13px', fontWeight: '500', color: '#111' }}>Preguntas ({questions.length})</div>
-            <a href={'/quiz/' + quizId + '/editar'} style={{ fontSize: '12px', fontWeight: '500', color: '#059669', background: '#f0fdf4', border: '1px solid #6ee7b7', padding: '5px 12px', borderRadius: '6px', textDecoration: 'none' }}>
+            <a href={'/quiz/' + quizId + '/agregar'} style={{ fontSize: '12px', fontWeight: '500', color: '#059669', background: '#f0fdf4', border: '1px solid #6ee7b7', padding: '5px 12px', borderRadius: '6px', textDecoration: 'none' }}>
               + Agregar preguntas
             </a>
           </div>
