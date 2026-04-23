@@ -32,6 +32,12 @@ export default async function Dashboard() {
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
+  const { data: favorites } = await supabase
+    .from('favorites')
+    .select('*, quizzes(*)')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+
   const { data: sessions } = await supabase
     .from('study_sessions')
     .select('*')
@@ -121,14 +127,8 @@ export default async function Dashboard() {
             const esHoy = dia === today
             return (
               <div key={dia} style={{
-                flex: 1,
-                height: '36px',
-                borderRadius: '8px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '2px',
+                flex: 1, height: '36px', borderRadius: '8px',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px',
                 background: esHoy ? '#059669' : activo ? '#d1fae5' : '#f9fafb',
                 color: esHoy ? 'white' : activo ? '#065f46' : '#d1d5db',
               }}>
@@ -175,7 +175,7 @@ export default async function Dashboard() {
             </div>
           ))
         ) : (
-          <div style={{ border: '1px dashed #e5e7eb', borderRadius: '12px', padding: '40px', textAlign: 'center' }}>
+          <div style={{ border: '1px dashed #e5e7eb', borderRadius: '12px', padding: '40px', textAlign: 'center', marginBottom: '16px' }}>
             <p style={{ fontSize: '14px', fontWeight: '500', color: '#111', marginBottom: '6px' }}>No tenes quizzes activos</p>
             <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '20px' }}>Crea tu propio quiz o encontra uno publico para empezar a estudiar.</p>
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
@@ -183,6 +183,29 @@ export default async function Dashboard() {
               <a href="/explorar" style={{ padding: '8px 18px', fontSize: '13px', color: '#6b7280', background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', textDecoration: 'none' }}>Explorar quizzes</a>
             </div>
           </div>
+        )}
+
+        {favorites && favorites.length > 0 && (
+          <>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', marginTop: '28px' }}>
+              <span style={{ fontSize: '14px', fontWeight: '500', color: '#111' }}>Mis favoritos</span>
+            </div>
+            {favorites.map(fav => (
+              <div key={fav.id} style={{ background: 'white', border: '1px solid #fde68a', borderRadius: '12px', padding: '14px 16px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ fontSize: '16px' }}>★</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '13px', fontWeight: '500', color: '#111', marginBottom: '3px' }}>{fav.quizzes?.title}</div>
+                  <div style={{ fontSize: '11px', color: '#9ca3af' }}>
+                    {fav.quizzes?.question_count} preguntas
+                    {fav.quizzes?.subject ? ' · ' + fav.quizzes.subject : ''}
+                  </div>
+                </div>
+                <a href={'/estudiar/' + fav.quiz_id + '/inicio'} style={{ fontSize: '12px', fontWeight: '500', color: '#065f46', background: '#d1fae5', border: '1px solid #6ee7b7', padding: '5px 12px', borderRadius: '6px', textDecoration: 'none' }}>
+                  Estudiar
+                </a>
+              </div>
+            ))}
+          </>
         )}
 
       </div>
