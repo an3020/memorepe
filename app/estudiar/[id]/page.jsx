@@ -185,10 +185,8 @@ function EstudiarInner({ params }) {
       .from('study_sessions')
       .update({ finished_at: new Date().toISOString(), correct, wrong, partial, xp_earned: xp })
       .eq('id', sessionId)
-    await supabase
-      .from('users')
-      .update({ last_study_date: new Date().toISOString().split('T')[0] })
-      .eq('id', userId)
+    const { error } = await supabase.rpc('update_streak', { p_user_id: userId })
+    console.log('update_streak resultado:', error)
   }
 
   async function next() {
