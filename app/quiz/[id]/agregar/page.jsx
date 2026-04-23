@@ -112,12 +112,13 @@ export default function AgregarPreguntas({ params }) {
     for (let i = 1; i < lines.length; i++) {
       const cols = parseCSVLine(lines[i])
       if (!cols[0]) continue
-      const allOpts = [cols[1], cols[2], cols[3], cols[4]].filter(Boolean)
-      const correctasRaw = cols[5]?.trim()
+      const allOpts = [cols[1], cols[2], cols[3], cols[4], cols[5]].filter(Boolean)
+      const correctasRaw = cols[6]?.trim()
+      const explanation = cols[7] || ''
       let correctIndexes = [0]
       if (correctasRaw) correctIndexes = correctasRaw.split(',').map(n => parseInt(n.trim()) - 1).filter(n => !isNaN(n))
       const options = allOpts.map((body, idx) => ({ body, is_correct: correctIndexes.includes(idx) }))
-      parsed.push({ body: cols[0], type: correctIndexes.length > 1 ? 'multiple' : 'single', explanation: cols[6] || '', options })
+      parsed.push({ body: cols[0], type: correctIndexes.length > 1 ? 'multiple' : 'single', explanation, options })
     }
     return parsed
   }

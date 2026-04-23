@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import FavoriteButton from './FavoriteButton'
+import ShareButton from './ShareButton'
 
 export default async function EstudiarInicio({ params }) {
   const { id } = await params
@@ -106,7 +107,10 @@ export default async function EstudiarInicio({ params }) {
         <div style={{ marginBottom: '32px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
             <h1 style={{ fontSize: '20px', fontWeight: '500', color: '#111', flex: 1, marginRight: '12px' }}>{quiz.title}</h1>
-            <FavoriteButton quizId={id} userId={user.id} initialFavorite={isFavorite} />
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <ShareButton quizId={id} />
+              <FavoriteButton quizId={id} userId={user.id} initialFavorite={isFavorite} />
+            </div>
           </div>
           <p style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '4px' }}>
             {total} preguntas en total
