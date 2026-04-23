@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import FavoriteButton from './FavoriteButton'
 
 export default async function EstudiarInicio({ params }) {
   const { id } = await params
@@ -26,11 +27,20 @@ export default async function EstudiarInicio({ params }) {
 
   const { data: quiz } = await supabase
     .from('quizzes')
-    .select('*')
+    .select('*, users(username)')
     .eq('id', id)
     .single()
 
   if (!quiz) redirect('/explorar')
+
+  const { data: favorite } = await supabase
+    .from('favorites')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('quiz_id', id)
+    .single()
+
+  const isFavorite = !!favorite
 
   const total = quiz.question_count || 0
 
@@ -94,12 +104,22 @@ export default async function EstudiarInicio({ params }) {
       <div style={{ maxWidth: '520px', margin: '0 auto', padding: '48px 24px' }}>
 
         <div style={{ marginBottom: '32px' }}>
-          <h1 style={{ fontSize: '20px', fontWeight: '500', color: '#111', marginBottom: '6px' }}>{quiz.title}</h1>
-          <p style={{ fontSize: '13px', color: '#9ca3af' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+            <h1 style={{ fontSize: '20px', fontWeight: '500', color: '#111', flex: 1, marginRight: '12px' }}>{quiz.title}</h1>
+            <FavoriteButton quizId={id} userId={user.id} initialFavorite={isFavorite} />
+          </div>
+          <p style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '4px' }}>
             {total} preguntas en total
             {quiz.subject ? ' · ' + quiz.subject : ''}
             {quiz.faculty ? ' · ' + quiz.faculty : ''}
           </p>
+          {quiz.users?.username && (
+            <p style={{ fontSize: '12px', color: '#9ca3af' }}>
+              por <span style={{ color: '#059669' }}>@{quiz.users.username}</span>
+              {' · '}
+              {new Date(quiz.updated_at || quiz.created_at).toLocaleDateString('es-AR')}
+            </p>
+          )}
           {quiz.notes && (
             <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#78350f', marginTop: '12px', lineHeight: '1.5' }}>
               {quiz.notes}
@@ -108,7 +128,7 @@ export default async function EstudiarInicio({ params }) {
         </div>
 
         <div style={{ fontSize: '13px', fontWeight: '500', color: '#111', marginBottom: '16px' }}>
-          Elegí como queres estudiar hoy
+          Elegi como queres estudiar hoy
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
