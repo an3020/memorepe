@@ -18,6 +18,8 @@ export default function GestionarQuiz({ params }) {
   const [deleteQuestionId, setDeleteQuestionId] = useState(null)
   const [editForm, setEditForm] = useState(null)
   const [msg, setMsg] = useState('')
+  const [editingQuestion, setEditingQuestion] = useState(null)
+  const [savingQuestion, setSavingQuestion] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -69,6 +71,54 @@ export default function GestionarQuiz({ params }) {
     load()
   }, [])
 
+  function startEditQuestion(q) {
+    setEditingQuestion({
+      id: q.id,
+      body: q.body,
+      type: q.type,
+      explanation: q.explanation || '',
+      options: q.options.map(o => ({ ...o }))
+    })
+  }
+
+  function updateEditOption(oIndex, field, value) {
+    const updated = { ...editingQuestion }
+    if (field === 'is_correct' && updated.type === 'single') {
+      updated.options = updated.options.map((o, i) => ({ ...o, is_correct: i === oIndex }))
+    } else {
+      updated.options[oIndex] = { ...updated.options[oIndex], [field]: value }
+    }
+    setEditingQuestion(updated)
+  }
+
+  async function saveQuestion() {
+    setSavingQuestion(true)
+    const q = editingQuestion
+
+    await supabase
+      .from('questions')
+      .update({ body: q.body, type: q.type, explanation: q.explanation })
+      .eq('id', q.id)
+
+    for (const opt of q.options) {
+      await supabase
+        .from('options')
+        .update({ body: opt.body, is_correct: opt.is_correct })
+        .eq('id', opt.id)
+    }
+
+    setQuestions(questions.map(question =>
+      question.id === q.id
+        ? { ...question, body: q.body, type: q.type, explanation: q.explanation, options: q.options }
+        : question
+    ))
+
+    setEditingQuestion(null)
+    setSavingQuestion(false)
+    setMsg('Pregunta actualizada.')
+    setTimeout(() => setMsg(''), 3000)
+  }
+
   async function saveInfo() {
     setSaving(true)
     const { error } = await supabase
@@ -108,10 +158,7 @@ export default function GestionarQuiz({ params }) {
   }
 
   async function resolveReport(reportId) {
-    await supabase
-      .from('question_reports')
-      .update({ status: 'resolved' })
-      .eq('id', reportId)
+    await supabase.from('question_reports').update({ status: 'resolved' }).eq('id', reportId)
     setReports(reports.map(r => r.id === reportId ? { ...r, status: 'resolved' } : r))
   }
 
@@ -192,10 +239,7 @@ export default function GestionarQuiz({ params }) {
               {questions.length} preguntas · creado el {new Date(quiz.created_at).toLocaleDateString('es-AR')}
             </p>
           </div>
-          <button
-            onClick={() => setShowDeleteQuiz(true)}
-            style={{ fontSize: '12px', color: '#ef4444', background: 'none', border: '1px solid #fecaca', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer' }}
-          >
+          <button onClick={() => setShowDeleteQuiz(true)} style={{ fontSize: '12px', color: '#ef4444', background: 'none', border: '1px solid #fecaca', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer' }}>
             Eliminar quiz
           </button>
         </div>
@@ -215,20 +259,13 @@ export default function GestionarQuiz({ params }) {
               {pendingReports.map(r => (
                 <div key={r.id} style={{ background: 'white', borderRadius: '8px', padding: '12px 14px', border: '1px solid #fecaca' }}>
                   <div style={{ fontSize: '12px', fontWeight: '500', color: '#b91c1c', marginBottom: '4px' }}>{r.reason}</div>
-                  {r.comment && (
-                    <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '6px' }}>{r.comment}</div>
-                  )}
+                  {r.comment && <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '6px' }}>{r.comment}</div>}
                   <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '8px' }}>
                     Pregunta: {r.questions?.body?.slice(0, 80)}{r.questions?.body?.length > 80 ? '...' : ''}
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '11px', color: '#9ca3af' }}>
-                      {new Date(r.created_at).toLocaleDateString('es-AR')}
-                    </span>
-                    <button
-                      onClick={() => resolveReport(r.id)}
-                      style={{ fontSize: '11px', color: '#065f46', background: '#d1fae5', border: '1px solid #6ee7b7', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer' }}
-                    >
+                    <span style={{ fontSize: '11px', color: '#9ca3af' }}>{new Date(r.created_at).toLocaleDateString('es-AR')}</span>
+                    <button onClick={() => resolveReport(r.id)} style={{ fontSize: '11px', color: '#065f46', background: '#d1fae5', border: '1px solid #6ee7b7', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer' }}>
                       Marcar como resuelto
                     </button>
                   </div>
@@ -246,23 +283,7 @@ export default function GestionarQuiz({ params }) {
               { value: 'link', label: 'Solo con link', desc: 'Solo quien tenga el link' },
               { value: 'private', label: 'Privado', desc: 'Solo vos' },
             ].map(v => (
-              <button
-                key={v.value}
-                onClick={() => changeVisibility(v.value)}
-                style={{
-                  flex: 1,
-                  padding: '10px 8px',
-                  fontSize: '12px',
-                  border: '1px solid',
-                  borderColor: quiz.visibility === v.value ? '#059669' : '#e5e7eb',
-                  borderRadius: '8px',
-                  background: quiz.visibility === v.value ? '#d1fae5' : 'white',
-                  color: quiz.visibility === v.value ? '#065f46' : '#6b7280',
-                  fontWeight: quiz.visibility === v.value ? '500' : '400',
-                  cursor: 'pointer',
-                  textAlign: 'center',
-                }}
-              >
+              <button key={v.value} onClick={() => changeVisibility(v.value)} style={{ flex: 1, padding: '10px 8px', fontSize: '12px', border: '1px solid', borderColor: quiz.visibility === v.value ? '#059669' : '#e5e7eb', borderRadius: '8px', background: quiz.visibility === v.value ? '#d1fae5' : 'white', color: quiz.visibility === v.value ? '#065f46' : '#6b7280', fontWeight: quiz.visibility === v.value ? '500' : '400', cursor: 'pointer', textAlign: 'center' }}>
                 <div>{v.label}</div>
                 <div style={{ fontSize: '10px', marginTop: '2px', color: quiz.visibility === v.value ? '#059669' : '#9ca3af' }}>{v.desc}</div>
               </button>
@@ -272,22 +293,18 @@ export default function GestionarQuiz({ params }) {
 
         <div style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
           <div style={{ fontSize: '13px', fontWeight: '500', color: '#111', marginBottom: '16px' }}>Informacion del quiz</div>
-
           <div style={{ marginBottom: '12px' }}>
             <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Nombre *</label>
             <input style={input} value={editForm.title} onChange={e => setEditForm({ ...editForm, title: e.target.value })} />
           </div>
-
           <div style={{ marginBottom: '12px' }}>
             <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Descripcion</label>
             <textarea style={{ ...input, minHeight: '60px', resize: 'vertical' }} value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })} />
           </div>
-
           <div style={{ marginBottom: '12px' }}>
             <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Nota para los estudiantes</label>
             <textarea style={{ ...input, minHeight: '60px', resize: 'vertical' }} value={editForm.notes} onChange={e => setEditForm({ ...editForm, notes: e.target.value })} />
           </div>
-
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
             <div>
               <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Categoria</label>
@@ -307,7 +324,6 @@ export default function GestionarQuiz({ params }) {
               <input style={input} value={editForm.subject} onChange={e => setEditForm({ ...editForm, subject: e.target.value })} />
             </div>
           </div>
-
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
             <div>
               <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Facultad</label>
@@ -318,12 +334,7 @@ export default function GestionarQuiz({ params }) {
               <input style={input} value={editForm.teacher} onChange={e => setEditForm({ ...editForm, teacher: e.target.value })} />
             </div>
           </div>
-
-          <button
-            onClick={saveInfo}
-            disabled={saving}
-            style={{ padding: '8px 18px', fontSize: '13px', fontWeight: '500', color: 'white', background: saving ? '#9ca3af' : '#059669', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
-          >
+          <button onClick={saveInfo} disabled={saving} style={{ padding: '8px 18px', fontSize: '13px', fontWeight: '500', color: 'white', background: saving ? '#9ca3af' : '#059669', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
             {saving ? 'Guardando...' : 'Guardar cambios'}
           </button>
         </div>
@@ -331,50 +342,107 @@ export default function GestionarQuiz({ params }) {
         <div style={{ marginBottom: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <div style={{ fontSize: '13px', fontWeight: '500', color: '#111' }}>Preguntas ({questions.length})</div>
-            <a
-              href={'/quiz/' + quizId + '/editar'}
-              style={{ fontSize: '12px', fontWeight: '500', color: '#059669', background: '#f0fdf4', border: '1px solid #6ee7b7', padding: '5px 12px', borderRadius: '6px', textDecoration: 'none' }}
-            >
+            <a href={'/quiz/' + quizId + '/editar'} style={{ fontSize: '12px', fontWeight: '500', color: '#059669', background: '#f0fdf4', border: '1px solid #6ee7b7', padding: '5px 12px', borderRadius: '6px', textDecoration: 'none' }}>
               + Agregar preguntas
             </a>
           </div>
 
           {questions.map((q, idx) => {
             const qReports = reports.filter(r => r.question_id === q.id && r.status === 'pending')
+            const isEditing = editingQuestion?.id === q.id
+
             return (
-              <div key={q.id} style={{ border: '1px solid', borderColor: qReports.length > 0 ? '#fecaca' : '#e5e7eb', borderRadius: '10px', padding: '12px 16px', marginBottom: '8px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '4px', display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      <span>{idx + 1} · {q.type === 'single' ? 'Una correcta' : 'Multiple correcta'}</span>
-                      {qReports.length > 0 && (
-                        <span style={{ fontSize: '10px', background: '#fef2f2', color: '#b91c1c', padding: '1px 6px', borderRadius: '4px', fontWeight: '500' }}>
-                          {qReports.length} reporte{qReports.length > 1 ? 's' : ''}
-                        </span>
-                      )}
+              <div key={q.id} style={{ border: '1px solid', borderColor: isEditing ? '#059669' : qReports.length > 0 ? '#fecaca' : '#e5e7eb', borderRadius: '10px', padding: '12px 16px', marginBottom: '8px' }}>
+
+                {isEditing ? (
+                  <div>
+                    <div style={{ fontSize: '12px', fontWeight: '500', color: '#059669', marginBottom: '10px' }}>Editando pregunta {idx + 1}</div>
+
+                    <textarea
+                      style={{ ...input, minHeight: '60px', resize: 'vertical', marginBottom: '10px' }}
+                      value={editingQuestion.body}
+                      onChange={e => setEditingQuestion({ ...editingQuestion, body: e.target.value })}
+                    />
+
+                    <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
+                      {['single', 'multiple'].map(t => (
+                        <button key={t} onClick={() => setEditingQuestion({ ...editingQuestion, type: t })} style={{ padding: '4px 12px', fontSize: '11px', border: '1px solid', borderColor: editingQuestion.type === t ? '#059669' : '#e5e7eb', borderRadius: '20px', background: editingQuestion.type === t ? '#d1fae5' : 'white', color: editingQuestion.type === t ? '#065f46' : '#9ca3af', cursor: 'pointer' }}>
+                          {t === 'single' ? 'Una correcta' : 'Multiple correcta'}
+                        </button>
+                      ))}
                     </div>
-                    <div style={{ fontSize: '13px', color: '#111', lineHeight: '1.4', marginBottom: '6px' }}>{q.body}</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                      {q.options?.map(opt => (
-                        <div key={opt.id} style={{ fontSize: '12px', color: opt.is_correct ? '#059669' : '#9ca3af', display: 'flex', gap: '6px', alignItems: 'center' }}>
-                          <span>{opt.is_correct ? '✓' : '·'}</span>
-                          <span>{opt.body}</span>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' }}>
+                      {editingQuestion.options.map((opt, oIndex) => (
+                        <div key={opt.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div
+                            onClick={() => updateEditOption(oIndex, 'is_correct', !opt.is_correct)}
+                            style={{ width: '18px', height: '18px', borderRadius: editingQuestion.type === 'single' ? '50%' : '4px', border: '2px solid', borderColor: opt.is_correct ? '#059669' : '#d1d5db', background: opt.is_correct ? '#059669' : 'white', cursor: 'pointer', flexShrink: 0 }}
+                          />
+                          <input
+                            style={{ ...input }}
+                            value={opt.body}
+                            onChange={e => updateEditOption(oIndex, 'body', e.target.value)}
+                          />
                         </div>
                       ))}
                     </div>
-                    {q.explanation && (
-                      <div style={{ fontSize: '11px', color: '#6b7280', background: '#fffbeb', borderRadius: '6px', padding: '6px 8px', marginTop: '8px' }}>
-                        {q.explanation}
-                      </div>
-                    )}
+
+                    <div style={{ marginBottom: '12px' }}>
+                      <label style={{ fontSize: '11px', color: '#9ca3af', display: 'block', marginBottom: '4px' }}>Explicacion didactica (opcional)</label>
+                      <textarea
+                        style={{ ...input, minHeight: '48px', resize: 'vertical', background: '#f9fafb' }}
+                        value={editingQuestion.explanation}
+                        onChange={e => setEditingQuestion({ ...editingQuestion, explanation: e.target.value })}
+                        placeholder="Explica por que es correcta esta respuesta..."
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button onClick={saveQuestion} disabled={savingQuestion} style={{ padding: '7px 16px', fontSize: '12px', fontWeight: '500', color: 'white', background: savingQuestion ? '#9ca3af' : '#059669', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
+                        {savingQuestion ? 'Guardando...' : 'Guardar pregunta'}
+                      </button>
+                      <button onClick={() => setEditingQuestion(null)} style={{ padding: '7px 16px', fontSize: '12px', color: '#6b7280', background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', cursor: 'pointer' }}>
+                        Cancelar
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => setDeleteQuestionId(q.id)}
-                    style={{ fontSize: '11px', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, padding: '4px' }}
-                  >
-                    Eliminar
-                  </button>
-                </div>
+                ) : (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '4px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <span>{idx + 1} · {q.type === 'single' ? 'Una correcta' : 'Multiple correcta'}</span>
+                        {qReports.length > 0 && (
+                          <span style={{ fontSize: '10px', background: '#fef2f2', color: '#b91c1c', padding: '1px 6px', borderRadius: '4px', fontWeight: '500' }}>
+                            {qReports.length} reporte{qReports.length > 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '13px', color: '#111', lineHeight: '1.4', marginBottom: '6px' }}>{q.body}</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        {q.options?.map(opt => (
+                          <div key={opt.id} style={{ fontSize: '12px', color: opt.is_correct ? '#059669' : '#9ca3af', display: 'flex', gap: '6px', alignItems: 'center' }}>
+                            <span>{opt.is_correct ? '✓' : '·'}</span>
+                            <span>{opt.body}</span>
+                          </div>
+                        ))}
+                      </div>
+                      {q.explanation && (
+                        <div style={{ fontSize: '11px', color: '#6b7280', background: '#fffbeb', borderRadius: '6px', padding: '6px 8px', marginTop: '8px' }}>
+                          {q.explanation}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
+                      <button onClick={() => startEditQuestion(q)} style={{ fontSize: '11px', color: '#059669', background: '#f0fdf4', border: '1px solid #6ee7b7', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer' }}>
+                        Editar
+                      </button>
+                      <button onClick={() => setDeleteQuestionId(q.id)} style={{ fontSize: '11px', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )
           })}
