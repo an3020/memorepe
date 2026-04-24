@@ -1,5 +1,7 @@
 import type { FC } from 'react'
 import LoginButton from './components/LoginButton'
+import FeedbackButton from '@/app/components/FeedbackButton'
+
 
 export default function Home() {
   return (
@@ -74,9 +76,11 @@ export default function Home() {
           <span style={{ fontSize: '12px', color: '#d1d5db', cursor: 'pointer' }}>Terminos</span>
           <span style={{ fontSize: '12px', color: '#d1d5db', cursor: 'pointer' }}>Privacidad</span>
           <span style={{ fontSize: '12px', color: '#d1d5db', cursor: 'pointer' }}>Contacto</span>
+
         </div>
       </footer>
 
+      
     </div>
   )
 }
