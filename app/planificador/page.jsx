@@ -3,32 +3,12 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import ExamCard from '@/app/components/ExamCard'
 
 const MINUTOS_POR_PREGUNTA = 1.5
 const FACTOR_SEGURIDAD = 1.3
 const DIAS_LABELS = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
 const TIEMPOS = [15, 30, 45, 60, 90]
-
-function StatCard({ pct, actual, total, label, tooltip, color }) {
-  const [showTooltip, setShowTooltip] = useState(false)
-  return (
-    <div
-      style={{ background: '#f9fafb', borderRadius: '10px', padding: '14px', textAlign: 'center', position: 'relative', cursor: 'help' }}
-      onMouseEnter={() => setShowTooltip(true)}
-      onMouseLeave={() => setShowTooltip(false)}
-    >
-      {showTooltip && (
-        <div style={{ position: 'absolute', bottom: '110%', left: '50%', transform: 'translateX(-50%)', background: '#111', color: 'white', fontSize: '11px', padding: '8px 12px', borderRadius: '8px', width: '180px', lineHeight: '1.5', zIndex: 10, textAlign: 'left' }}>
-          {tooltip}
-          <div style={{ position: 'absolute', bottom: '-5px', left: '50%', transform: 'translateX(-50%)', width: '10px', height: '10px', background: '#111', clipPath: 'polygon(0 0, 100% 0, 50% 100%)' }} />
-        </div>
-      )}
-      <div style={{ fontSize: '24px', fontWeight: '500', color: color || '#111' }}>{pct}%</div>
-      <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>{actual} / {total}</div>
-      <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px', fontWeight: '500' }}>{label}</div>
-    </div>
-  )
-}
 
 export default function Planificador() {
   const router = useRouter()
@@ -222,21 +202,6 @@ export default function Planificador() {
     setExams(prev => prev.filter(e => e.id !== examId))
   }
 
-  function modeColor(mode) {
-    if (mode === 'Calentamiento') return { bg: '#e0f2fe', color: '#0369a1' }
-    if (mode === 'Sesion express') return { bg: '#d1fae5', color: '#065f46' }
-    if (mode === 'Sesion completa') return { bg: '#ede9fe', color: '#5b21b6' }
-    if (mode === 'Maraton') return { bg: '#fef3c7', color: '#92400e' }
-    return { bg: '#f3f4f6', color: '#374151' }
-  }
-
-  function daysLeftText(days) {
-    if (days === 0) return 'Hoy es el examen'
-    if (days === 1) return 'Mañana es el examen'
-    if (days < 0) return 'Examen pasado'
-    return days + ' días para el examen'
-  }
-
   const input = { width: '100%', padding: '8px 12px', fontSize: '13px', border: '1px solid #e5e7eb', borderRadius: '8px', background: 'white', color: '#111', fontFamily: 'Arial, sans-serif', boxSizing: 'border-box' }
   const allAvailableQuizzes = [
     ...myQuizzes.map(q => ({ ...q, tag: 'Mio' })),
@@ -410,117 +375,16 @@ export default function Planificador() {
         )}
 
         {exams.map(exam => {
-          const p = exam.plan
-          const mc = p ? modeColor(p.recommended_mode) : { bg: '#f3f4f6', color: '#374151' }
-          const isEditing = editingExamId === exam.id
-
-          if (isEditing) {
+          if (editingExamId === exam.id) {
             return <ExamForm key={exam.id} onSave={(force) => updateExam(exam.id, force)} onCancel={cancelEdit} isEdit={true} />
           }
-
           return (
-            <div key={exam.id} style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                <div>
-                  <div style={{ fontSize: '16px', fontWeight: '500', color: '#111', marginBottom: '4px' }}>{exam.title}</div>
-                  <div style={{ fontSize: '12px', color: '#9ca3af' }}>
-                    {new Date(exam.exam_date + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                    {' · '}
-                    <span style={{ color: p?.days_left <= 7 ? '#ef4444' : p?.days_left <= 14 ? '#d97706' : '#059669', fontWeight: '500' }}>
-                      {p ? daysLeftText(p.days_left) : ''}
-                    </span>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button onClick={() => startEdit(exam)} style={{ fontSize: '11px', color: '#059669', background: '#f0fdf4', border: '1px solid #6ee7b7', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer' }}>Editar</button>
-                  <button onClick={() => deleteExam(exam.id)} style={{ fontSize: '11px', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer' }}>Eliminar</button>
-                </div>
-              </div>
-
-              {p && p.total_questions > 0 && (
-                <>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '14px' }}>
-                    <StatCard
-                      pct={p.seen_pct}
-                      actual={p.seen}
-                      total={p.total_questions}
-                      label="Vistas"
-                      color="#374151"
-                      tooltip="Preguntas que respondiste al menos una vez. Es tu punto de partida — cada sesión suma."
-                    />
-                    <StatCard
-                      pct={p.in_progress_pct}
-                      actual={p.in_progress}
-                      total={p.total_questions}
-                      label="En progreso"
-                      color="#d97706"
-                      tooltip="Las respondiste bien al menos una vez. El algoritmo todavía necesita confirmar que las dominás con una segunda sesión correcta."
-                    />
-                    <StatCard
-                      pct={p.dominated_pct}
-                      actual={p.dominated}
-                      total={p.total_questions}
-                      label="Dominadas"
-                      color="#059669"
-                      tooltip="Las respondiste correctamente en al menos 2 sesiones distintas. Estas las tenés. El algoritmo te las va a mostrar cada vez menos."
-                    />
-                  </div>
-
-                  <div style={{ height: '4px', background: '#f0f0f0', borderRadius: '4px', overflow: 'hidden', marginBottom: '14px' }}>
-                    <div style={{ height: '100%', display: 'flex', borderRadius: '4px', overflow: 'hidden' }}>
-                      <div style={{ width: p.dominated_pct + '%', background: '#059669' }} />
-                      <div style={{ width: p.in_progress_pct + '%', background: '#fcd34d' }} />
-                      <div style={{ width: (p.seen_pct - p.dominated_pct - p.in_progress_pct) + '%', background: '#e5e7eb' }} />
-                    </div>
-                  </div>
-
-                  {p.due_today > 0 && !p.goal_met && (
-                    <div style={{ fontSize: '11px', color: '#d97706', fontWeight: '500', marginBottom: '10px' }}>
-                      ⚡ {p.due_today} preguntas vencidas — el algoritmo las prioriza hoy
-                    </div>
-                  )}
-
-                  {p.days_left > 0 && (
-                    p.goal_met ? (
-                      <div style={{ background: '#f0fdf4', border: '1px solid #6ee7b7', borderRadius: '10px', padding: '14px 16px' }}>
-                        <div style={{ fontSize: '13px', fontWeight: '500', color: '#065f46', marginBottom: '4px' }}>
-                          ✅ Objetivo de hoy cumplido · {p.studied_today} preguntas completadas
-                        </div>
-                        <div style={{ fontSize: '11px', color: '#059669', marginBottom: '10px' }}>
-                          ¿Querés adelantar? Podés hacer otras {p.questions_per_day} preguntas ahora.
-                        </div>
-                        {exam.exam_quizzes?.length > 0 && (
-                          <a href={'/estudiar/' + exam.exam_quizzes[0].quiz_id + '?n=' + p.questions_per_day} style={{ fontSize: '12px', fontWeight: '500', color: '#065f46', background: '#d1fae5', border: '1px solid #6ee7b7', padding: '6px 14px', borderRadius: '8px', textDecoration: 'none' }}>
-                            Adelantar sesión
-                          </a>
-                        )}
-                      </div>
-                    ) : (
-                      <div style={{ background: mc.bg, borderRadius: '10px', padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
-                        <div>
-                          <div style={{ fontSize: '11px', color: mc.color, marginBottom: '2px', fontWeight: '500' }}>Recomendación para hoy</div>
-                          <div style={{ fontSize: '14px', fontWeight: '500', color: mc.color }}>{p.recommended_mode} · {p.questions_per_day} preguntas</div>
-                          <div style={{ fontSize: '11px', color: mc.color, opacity: 0.8, marginTop: '2px' }}>
-                            {p.unseen} preguntas sin ver · {p.days_left} días disponibles
-                          </div>
-                        </div>
-                        {exam.exam_quizzes?.length > 0 && (
-                          <a href={'/estudiar/' + exam.exam_quizzes[0].quiz_id + '?n=' + p.questions_per_day} style={{ fontSize: '12px', fontWeight: '500', color: 'white', background: '#059669', padding: '8px 14px', borderRadius: '8px', textDecoration: 'none', flexShrink: 0 }}>
-                            Estudiar ahora
-                          </a>
-                        )}
-                      </div>
-                    )
-                  )}
-                </>
-              )}
-
-              {p && p.total_questions === 0 && (
-                <div style={{ background: '#f9fafb', borderRadius: '8px', padding: '14px', textAlign: 'center', fontSize: '13px', color: '#9ca3af' }}>
-                  No hay sets de preguntas asociados. Hacé clic en Editar para agregar.
-                </div>
-              )}
-            </div>
+            <ExamCard
+              key={exam.id}
+              exam={exam}
+              onEdit={() => startEdit(exam)}
+              onDelete={() => deleteExam(exam.id)}
+            />
           )
         })}
 
