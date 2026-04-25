@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import QuizProgressCard from '@/app/components/QuizProgressCard'
+import FeedbackButton from '@/app/components/FeedbackButton'
 
 export default async function Dashboard() {
   const cookieStore = await cookies()
@@ -264,6 +265,7 @@ export default async function Dashboard() {
         )}
 
       </div>
+      <FeedbackButton />
     </div>
   )
 }

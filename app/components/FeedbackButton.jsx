@@ -22,34 +22,14 @@ export default function FeedbackButton() {
     setSending(false)
     setSent(true)
     setMessage('')
-    setTimeout(() => {
-      setSent(false)
-      setOpen(false)
-    }, 2000)
+    setTimeout(() => { setSent(false); setOpen(false) }, 2500)
   }
 
   return (
     <>
       <button
         onClick={() => setOpen(true)}
-        style={{
-          position: 'fixed',
-          bottom: '24px',
-          right: '24px',
-          padding: '8px 16px',
-          fontSize: '13px',
-          fontWeight: '500',
-          color: 'white',
-          background: '#059669',
-          border: 'none',
-          borderRadius: '20px',
-          cursor: 'pointer',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-          zIndex: 50,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-        }}
+        style={{ position: 'fixed', bottom: '24px', right: '24px', padding: '8px 16px', fontSize: '13px', fontWeight: '500', color: 'white', background: '#059669', border: 'none', borderRadius: '20px', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', zIndex: 50, display: 'flex', alignItems: 'center', gap: '6px' }}
       >
         💬 Feedback
       </button>
@@ -57,7 +37,6 @@ export default function FeedbackButton() {
       {open && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end', padding: '24px', zIndex: 100 }}>
           <div style={{ background: 'white', borderRadius: '16px', padding: '20px', width: '100%', maxWidth: '360px', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
-
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <div>
                 <p style={{ fontSize: '14px', fontWeight: '500', color: '#111', marginBottom: '2px' }}>¿Qué encontraste?</p>

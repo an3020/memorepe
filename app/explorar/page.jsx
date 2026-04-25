@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import FeedbackButton from '@/app/components/FeedbackButton'
 
 export default async function Explorar({ searchParams }) {
   const cookieStore = await cookies()
@@ -217,6 +218,7 @@ export default async function Explorar({ searchParams }) {
           </div>
         )}
       </div>
+      <FeedbackButton />
     </div>
   )
 }

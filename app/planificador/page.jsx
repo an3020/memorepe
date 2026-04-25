@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import ExamCard from '@/app/components/ExamCard'
+import FeedbackButton from '@/app/components/FeedbackButton'
 
 const MINUTOS_POR_PREGUNTA = 1.5
 const FACTOR_SEGURIDAD = 1.3
@@ -404,6 +405,7 @@ export default function Planificador() {
         )}
 
       </div>
+      <FeedbackButton />
     </div>
   )
 }
