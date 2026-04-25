@@ -47,6 +47,14 @@ export default async function Dashboard() {
     .not('finished_at', 'is', null)
     .order('finished_at', { ascending: false })
 
+  const { data: exams } = await supabase
+    .from('exams')
+    .select('*, exam_quizzes(quiz_id)')
+    .eq('user_id', user.id)
+    .eq('status', 'active')
+    .gte('exam_date', new Date().toISOString().split('T')[0])
+    .order('exam_date', { ascending: true })
+
   const totalCorrect = sessions?.reduce((sum, s) => sum + (s.correct || 0), 0) || 0
   const totalQuestions = sessions?.reduce((sum, s) => sum + (s.total_questions || 0), 0) || 0
   const precision = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : null
@@ -88,29 +96,18 @@ export default async function Dashboard() {
       .from('quizzes')
       .select('*')
       .in('id', recentQuizIds)
-    recentQuizzes = recentQuizIds
-      .map(id => recentData?.find(q => q.id === id))
-      .filter(Boolean)
+    recentQuizzes = recentQuizIds.map(id => recentData?.find(q => q.id === id)).filter(Boolean)
   }
 
-  const allQuizIds = [...new Set([
-    ...recentQuizIds,
-    ...(quizzes || []).map(q => q.id)
-  ])]
-
+  const allQuizIds = [...new Set([...recentQuizIds, ...(quizzes || []).map(q => q.id)])]
   let progressMap = {}
   if (allQuizIds.length > 0) {
     const { data: progressData } = await supabase
       .rpc('get_user_quizzes_progress', { p_user_id: user.id, p_quiz_ids: allQuizIds })
-    if (progressData) {
-      progressData.forEach(p => { progressMap[p.quiz_id] = p })
-    }
+    if (progressData) progressData.forEach(p => { progressMap[p.quiz_id] = p })
   }
 
-  const quizzesConProgreso = (quizzes || []).map(quiz => ({
-    ...quiz,
-    progreso: progressMap[quiz.id]
-  }))
+  const quizzesConProgreso = (quizzes || []).map(quiz => ({ ...quiz, progreso: progressMap[quiz.id] }))
 
   function QuizCard({ quiz, progreso }) {
     const tieneProgreso = progreso && progreso.seen > 0
@@ -120,8 +117,7 @@ export default async function Dashboard() {
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: '13px', fontWeight: '500', color: '#111', marginBottom: '3px' }}>{quiz.title}</div>
             <div style={{ fontSize: '11px', color: '#9ca3af' }}>
-              {quiz.question_count} preguntas
-              {quiz.subject ? ' · ' + quiz.subject : ''}
+              {quiz.question_count} preguntas{quiz.subject ? ' · ' + quiz.subject : ''}
             </div>
           </div>
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
@@ -160,6 +156,7 @@ export default async function Dashboard() {
         <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
           <span style={{ fontSize: '13px', fontWeight: '500', color: '#111' }}>Inicio</span>
           <a href="/explorar" style={{ fontSize: '13px', color: '#9ca3af', textDecoration: 'none' }}>Explorar</a>
+          <a href="/planificador" style={{ fontSize: '13px', color: '#9ca3af', textDecoration: 'none' }}>Planificador</a>
           <a href="/crear-quiz" style={{ fontSize: '13px', color: '#9ca3af', textDecoration: 'none' }}>Crear quiz</a>
           <a href="/perfil" style={{ fontSize: '13px', color: '#9ca3af', textDecoration: 'none' }}>Perfil</a>
           <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#d1fae5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '500', color: '#065f46' }}>
@@ -204,12 +201,7 @@ export default async function Dashboard() {
             const activo = diasConActividad.has(dia)
             const esHoy = dia === today
             return (
-              <div key={dia} style={{
-                flex: 1, height: '36px', borderRadius: '8px',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px',
-                background: esHoy ? '#059669' : activo ? '#d1fae5' : '#f9fafb',
-                color: esHoy ? 'white' : activo ? '#065f46' : '#d1d5db',
-              }}>
+              <div key={dia} style={{ flex: 1, height: '36px', borderRadius: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', background: esHoy ? '#059669' : activo ? '#d1fae5' : '#f9fafb', color: esHoy ? 'white' : activo ? '#065f46' : '#d1d5db' }}>
                 <span style={{ fontSize: '9px' }}>{diasSemana[d.getDay()]}</span>
                 <span style={{ fontSize: '11px' }}>{activo || esHoy ? '✓' : '·'}</span>
               </div>
@@ -226,6 +218,52 @@ export default async function Dashboard() {
             <div style={{ height: '100%', width: xpPct + '%', background: '#059669', borderRadius: '3px' }} />
           </div>
         </div>
+
+        {exams && exams.length > 0 && (
+          <>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <span style={{ fontSize: '14px', fontWeight: '500', color: '#111' }}>Mis examenes</span>
+              <a href="/planificador" style={{ fontSize: '12px', color: '#059669', textDecoration: 'none' }}>Ver planificador</a>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '24px' }}>
+              {exams.map(exam => {
+                const examDate = new Date(exam.exam_date + 'T12:00:00')
+                const daysLeft = Math.ceil((examDate - new Date()) / (1000 * 60 * 60 * 24))
+                const urgent = daysLeft <= 7
+                const soon = daysLeft <= 14
+                return (
+                  <a
+                    key={exam.id}
+                    href="/planificador"
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      padding: '12px 16px',
+                      borderRadius: '10px',
+                      border: '1px solid',
+                      borderColor: urgent ? '#fecaca' : soon ? '#fde68a' : '#e5e7eb',
+                      background: urgent ? '#fef2f2' : soon ? '#fffbeb' : '#f9fafb',
+                      textDecoration: 'none',
+                      minWidth: '140px',
+                      flex: '1',
+                    }}
+                  >
+                    <div style={{ fontSize: '12px', fontWeight: '500', color: '#111', marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{exam.title}</div>
+                    <div style={{ fontSize: '11px', color: urgent ? '#ef4444' : soon ? '#d97706' : '#9ca3af', fontWeight: '500' }}>
+                      {daysLeft === 0 ? 'Hoy' : daysLeft === 1 ? 'Mañana' : daysLeft + ' dias'}
+                    </div>
+                  </a>
+                )
+              })}
+              <a
+                href="/planificador"
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px 16px', borderRadius: '10px', border: '1px dashed #e5e7eb', textDecoration: 'none', minWidth: '60px', color: '#9ca3af', fontSize: '18px' }}
+              >
+                +
+              </a>
+            </div>
+          </>
+        )}
 
         {recentQuizzes.length > 0 && (
           <>
@@ -270,8 +308,7 @@ export default async function Dashboard() {
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '13px', fontWeight: '500', color: '#111', marginBottom: '3px' }}>{fav.quizzes?.title}</div>
                   <div style={{ fontSize: '11px', color: '#9ca3af' }}>
-                    {fav.quizzes?.question_count} preguntas
-                    {fav.quizzes?.subject ? ' · ' + fav.quizzes.subject : ''}
+                    {fav.quizzes?.question_count} preguntas{fav.quizzes?.subject ? ' · ' + fav.quizzes.subject : ''}
                   </div>
                 </div>
                 <a href={'/estudiar/' + fav.quiz_id + '/inicio'} style={{ fontSize: '12px', fontWeight: '500', color: '#065f46', background: '#d1fae5', border: '1px solid #6ee7b7', padding: '5px 12px', borderRadius: '6px', textDecoration: 'none' }}>

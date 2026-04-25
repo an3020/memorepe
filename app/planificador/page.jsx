@@ -470,21 +470,37 @@ export default function Planificador() {
                   </div>
 
                   {p.days_left > 0 && (
-                    <div style={{ background: mc.bg, borderRadius: '10px', padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
-                      <div>
-                        <div style={{ fontSize: '11px', color: mc.color, marginBottom: '2px', fontWeight: '500' }}>Recomendación para hoy</div>
-                        <div style={{ fontSize: '14px', fontWeight: '500', color: mc.color }}>{p.recommended_mode} · {p.questions_per_day} preguntas</div>
-                        <div style={{ fontSize: '11px', color: mc.color, opacity: 0.8, marginTop: '2px' }}>
-                          {p.unseen} preguntas sin dominar · {p.days_left} días disponibles
+                    p.goal_met ? (
+                        <div style={{ background: '#f0fdf4', border: '1px solid #6ee7b7', borderRadius: '10px', padding: '14px 16px' }}>
+                        <div style={{ fontSize: '13px', fontWeight: '500', color: '#065f46', marginBottom: '4px' }}>
+                            ✅ Objetivo de hoy cumplido · {p.studied_today} preguntas completadas
                         </div>
-                      </div>
-                      {exam.exam_quizzes?.length > 0 && (
-                        <a href={'/estudiar/' + exam.exam_quizzes[0].quiz_id + '?n=' + p.questions_per_day} style={{ fontSize: '12px', fontWeight: '500', color: 'white', background: '#059669', padding: '8px 14px', borderRadius: '8px', textDecoration: 'none', flexShrink: 0 }}>
-                          Estudiar ahora
-                        </a>
-                      )}
-                    </div>
-                  )}
+                        <div style={{ fontSize: '11px', color: '#059669', marginBottom: '10px' }}>
+                            ¿Querés adelantar? Podés hacer otras {p.questions_per_day} preguntas ahora.
+                        </div>
+                        {exam.exam_quizzes?.length > 0 && (
+                            <a href={'/estudiar/' + exam.exam_quizzes[0].quiz_id + '?n=' + p.questions_per_day} style={{ fontSize: '12px', fontWeight: '500', color: '#065f46', background: '#d1fae5', border: '1px solid #6ee7b7', padding: '6px 14px', borderRadius: '8px', textDecoration: 'none' }}>
+                            Adelantar sesión
+                            </a>
+                        )}
+                        </div>
+                    ) : (
+                        <div style={{ background: mc.bg, borderRadius: '10px', padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                        <div>
+                            <div style={{ fontSize: '11px', color: mc.color, marginBottom: '2px', fontWeight: '500' }}>Recomendación para hoy</div>
+                            <div style={{ fontSize: '14px', fontWeight: '500', color: mc.color }}>{p.recommended_mode} · {p.questions_per_day} preguntas</div>
+                            <div style={{ fontSize: '11px', color: mc.color, opacity: 0.8, marginTop: '2px' }}>
+                            {p.unseen} preguntas sin dominar · {p.days_left} días disponibles
+                            </div>
+                        </div>
+                        {exam.exam_quizzes?.length > 0 && (
+                            <a href={'/estudiar/' + exam.exam_quizzes[0].quiz_id + '?n=' + p.questions_per_day} style={{ fontSize: '12px', fontWeight: '500', color: 'white', background: '#059669', padding: '8px 14px', borderRadius: '8px', textDecoration: 'none', flexShrink: 0 }}>
+                            Estudiar ahora
+                            </a>
+                        )}
+                        </div>
+                    )
+                    )}
                 </>
               )}
 
