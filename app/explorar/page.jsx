@@ -20,6 +20,8 @@ export default async function Explorar({ searchParams }) {
     }
   )
 
+  const { data: { user } } = await supabase.auth.getUser()
+
   const params = await searchParams
   const categoria = params?.categoria || ''
   const busqueda = params?.q || ''
@@ -34,6 +36,16 @@ export default async function Explorar({ searchParams }) {
   if (busqueda) query = query.or('title.ilike.%' + busqueda + '%,subject.ilike.%' + busqueda + '%')
 
   const { data: quizzes } = await query
+
+  let progressMap = {}
+  if (user && quizzes && quizzes.length > 0) {
+    const quizIds = quizzes.map(q => q.id)
+    const { data: progressData } = await supabase
+      .rpc('get_user_quizzes_progress', { p_user_id: user.id, p_quiz_ids: quizIds })
+    if (progressData) {
+      progressData.forEach(p => { progressMap[p.quiz_id] = p })
+    }
+  }
 
   const categorias = [
     { value: '', label: 'Todo' },
@@ -103,17 +115,11 @@ export default async function Explorar({ searchParams }) {
               placeholder="Buscar por titulo, materia, facultad..."
               style={{ flex: 1, padding: '9px 14px', fontSize: '13px', border: '1px solid #e5e7eb', borderRadius: '8px', background: 'white', color: '#111', fontFamily: 'Arial, sans-serif' }}
             />
-            <button
-              type="submit"
-              style={{ padding: '9px 18px', fontSize: '13px', fontWeight: '500', color: 'white', background: '#059669', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
-            >
+            <button type="submit" style={{ padding: '9px 18px', fontSize: '13px', fontWeight: '500', color: 'white', background: '#059669', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
               Buscar
             </button>
             {busqueda && (
-              <a
-                href={buildUrl(categoria, '')}
-                style={{ padding: '9px 14px', fontSize: '13px', color: '#6b7280', background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', textDecoration: 'none' }}
-              >
+              <a href={buildUrl(categoria, '')} style={{ padding: '9px 14px', fontSize: '13px', color: '#6b7280', background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', textDecoration: 'none' }}>
                 Limpiar
               </a>
             )}
@@ -123,9 +129,8 @@ export default async function Explorar({ searchParams }) {
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '24px' }}>
           {categorias.map(cat => {
             const isActive = categoria === cat.value || (!categoria && cat.value === '')
-            const href = buildUrl(cat.value, busqueda)
             return (
-              <a key={cat.value} href={href} style={isActive ? pillActive : pillBase}>
+              <a key={cat.value} href={buildUrl(cat.value, busqueda)} style={isActive ? pillActive : pillBase}>
                 {cat.label}
               </a>
             )
@@ -144,6 +149,9 @@ export default async function Explorar({ searchParams }) {
               const catStyle = catColors[quiz.category] || catColors.otro
               const username = quiz.users?.username
               const fechaActualizacion = timeAgo(quiz.updated_at || quiz.created_at)
+              const p = progressMap[quiz.id]
+              const tieneProgreso = p && p.seen > 0
+
               return (
                 <div key={quiz.id} style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
@@ -156,14 +164,28 @@ export default async function Explorar({ searchParams }) {
                   </div>
                   {quiz.subject && (
                     <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '8px' }}>
-                      {quiz.subject}
-                      {quiz.faculty ? ' · ' + quiz.faculty : ''}
+                      {quiz.subject}{quiz.faculty ? ' · ' + quiz.faculty : ''}
                     </div>
                   )}
                   <div style={{ display: 'flex', gap: '12px', marginBottom: '10px' }}>
                     <span style={{ fontSize: '12px', color: '#9ca3af' }}>{quiz.question_count} preguntas</span>
                     <span style={{ fontSize: '12px', color: '#9ca3af' }}>{quiz.student_count || 0} estudiantes</span>
                   </div>
+
+                  {tieneProgreso && (
+                    <div style={{ marginBottom: '10px', padding: '8px 10px', background: '#f9fafb', borderRadius: '8px' }}>
+                      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', fontSize: '11px', marginBottom: '6px' }}>
+                        <span style={{ color: '#6b7280' }}>Round {p.round}</span>
+                        <span style={{ color: '#059669', fontWeight: '500' }}>{p.dominated_pct}% dominadas</span>
+                        {p.due_today > 0 && <span style={{ color: '#d97706', fontWeight: '500' }}>{p.due_today} para repasar hoy</span>}
+                        {p.unseen > 0 && <span style={{ color: '#9ca3af' }}>{p.unseen} sin ver</span>}
+                      </div>
+                      <div style={{ height: '3px', background: '#e5e7eb', borderRadius: '3px', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: p.dominated_pct + '%', background: '#059669', borderRadius: '3px' }} />
+                      </div>
+                    </div>
+                  )}
+
                   {quiz.notes && (
                     <div style={{ fontSize: '12px', color: '#6b7280', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '6px', padding: '8px 10px', marginBottom: '10px', lineHeight: '1.4' }}>
                       {quiz.notes}
@@ -177,7 +199,7 @@ export default async function Explorar({ searchParams }) {
                       <span style={{ fontSize: '11px', color: '#9ca3af' }}>{fechaActualizacion}</span>
                     </div>
                     <a href={'/estudiar/' + quiz.id + '/inicio'} style={{ fontSize: '12px', fontWeight: '500', color: '#065f46', background: '#d1fae5', border: '1px solid #6ee7b7', padding: '5px 12px', borderRadius: '6px', textDecoration: 'none' }}>
-                      Estudiar
+                      {tieneProgreso ? 'Continuar' : 'Estudiar'}
                     </a>
                   </div>
                 </div>
