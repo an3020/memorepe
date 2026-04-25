@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server'
 export async function GET(request) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
+  const origin = process.env.NEXT_PUBLIC_SITE_URL || requestUrl.origin
 
   if (code) {
     const cookieStore = await cookies()
@@ -15,9 +16,11 @@ export async function GET(request) {
         cookies: {
           getAll() { return cookieStore.getAll() },
           setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            )
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              )
+            } catch (e) {}
           }
         }
       }
@@ -35,10 +38,10 @@ export async function GET(request) {
         .single()
 
       if (!profile?.username) {
-        return NextResponse.redirect(new URL('/onboarding', request.url))
+        return NextResponse.redirect(new URL('/onboarding', origin))
       }
     }
   }
 
-  return NextResponse.redirect(new URL('/dashboard', request.url))
+  return NextResponse.redirect(new URL('/dashboard', origin))
 }
