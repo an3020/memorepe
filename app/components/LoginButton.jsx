@@ -6,10 +6,14 @@ export default function LoginButton({ label = 'Iniciar sesión', primary = false
   const supabase = createClient()
 
   async function loginWithGoogle() {
+    const redirectTo = process.env.NEXT_PUBLIC_SITE_URL 
+      ? process.env.NEXT_PUBLIC_SITE_URL + '/auth/callback'
+      : window.location.origin + '/auth/callback'
+      
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`
+        redirectTo
       }
     })
   }
@@ -17,11 +21,24 @@ export default function LoginButton({ label = 'Iniciar sesión', primary = false
   return (
     <button
       onClick={loginWithGoogle}
-      className={
-        primary
-          ? 'px-5 py-2.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700'
-          : 'px-4 py-2 text-sm text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50'
-      }
+      style={primary ? {
+        padding: '10px 20px',
+        fontSize: '14px',
+        fontWeight: '500',
+        color: 'white',
+        background: '#059669',
+        border: 'none',
+        borderRadius: '8px',
+        cursor: 'pointer',
+      } : {
+        padding: '10px 20px',
+        fontSize: '14px',
+        color: '#6b7280',
+        background: 'white',
+        border: '1px solid #e5e7eb',
+        borderRadius: '8px',
+        cursor: 'pointer',
+      }}
     >
       {label}
     </button>
