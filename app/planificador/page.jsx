@@ -9,6 +9,27 @@ const FACTOR_SEGURIDAD = 1.3
 const DIAS_LABELS = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
 const TIEMPOS = [15, 30, 45, 60, 90]
 
+function StatCard({ pct, actual, total, label, tooltip, color }) {
+  const [showTooltip, setShowTooltip] = useState(false)
+  return (
+    <div
+      style={{ background: '#f9fafb', borderRadius: '10px', padding: '14px', textAlign: 'center', position: 'relative', cursor: 'help' }}
+      onMouseEnter={() => setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+    >
+      {showTooltip && (
+        <div style={{ position: 'absolute', bottom: '110%', left: '50%', transform: 'translateX(-50%)', background: '#111', color: 'white', fontSize: '11px', padding: '8px 12px', borderRadius: '8px', width: '180px', lineHeight: '1.5', zIndex: 10, textAlign: 'left' }}>
+          {tooltip}
+          <div style={{ position: 'absolute', bottom: '-5px', left: '50%', transform: 'translateX(-50%)', width: '10px', height: '10px', background: '#111', clipPath: 'polygon(0 0, 100% 0, 50% 100%)' }} />
+        </div>
+      )}
+      <div style={{ fontSize: '24px', fontWeight: '500', color: color || '#111' }}>{pct}%</div>
+      <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>{actual} / {total}</div>
+      <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px', fontWeight: '500' }}>{label}</div>
+    </div>
+  )
+}
+
 export default function Planificador() {
   const router = useRouter()
   const supabase = createClient()
@@ -93,9 +114,7 @@ export default function Planificador() {
 
   function toggleDia(idx) {
     setForm(prev => {
-      const dias = prev.dias.includes(idx)
-        ? prev.dias.filter(d => d !== idx)
-        : [...prev.dias, idx]
+      const dias = prev.dias.includes(idx) ? prev.dias.filter(d => d !== idx) : [...prev.dias, idx]
       return { ...prev, dias }
     })
   }
@@ -172,7 +191,6 @@ export default function Planificador() {
 
     await supabase.from('exams').update({ title: form.title, exam_date: form.exam_date, weekly_email: form.weekly_reminder }).eq('id', examId)
     await supabase.from('exam_quizzes').delete().eq('exam_id', examId)
-
     if (form.selectedQuizzes.length > 0) {
       await supabase.from('exam_quizzes').insert(form.selectedQuizzes.map(q => ({ exam_id: examId, quiz_id: q.id })))
     }
@@ -192,23 +210,12 @@ export default function Planificador() {
     const quizIds = exam.exam_quizzes?.map(eq => eq.quiz_id) || []
     const allQuizzes = [...myQuizzes, ...favoriteQuizzes]
     const selected = quizIds.map(id => allQuizzes.find(q => q.id === id)).filter(Boolean)
-    setForm({
-      title: exam.title,
-      exam_date: exam.exam_date,
-      weekly_reminder: exam.weekly_email || false,
-      selectedQuizzes: selected,
-      dias: [0, 1, 2, 3, 4],
-      minutos: 30,
-    })
+    setForm({ title: exam.title, exam_date: exam.exam_date, weekly_reminder: exam.weekly_email || false, selectedQuizzes: selected, dias: [0, 1, 2, 3, 4], minutos: 30 })
     setEditingExamId(exam.id)
     setWarning(null)
   }
 
-  function cancelEdit() {
-    setEditingExamId(null)
-    setForm(emptyForm)
-    setWarning(null)
-  }
+  function cancelEdit() { setEditingExamId(null); setForm(emptyForm); setWarning(null) }
 
   async function deleteExam(examId) {
     await supabase.from('exams').delete().eq('id', examId)
@@ -231,7 +238,6 @@ export default function Planificador() {
   }
 
   const input = { width: '100%', padding: '8px 12px', fontSize: '13px', border: '1px solid #e5e7eb', borderRadius: '8px', background: 'white', color: '#111', fontFamily: 'Arial, sans-serif', boxSizing: 'border-box' }
-
   const allAvailableQuizzes = [
     ...myQuizzes.map(q => ({ ...q, tag: 'Mio' })),
     ...favoriteQuizzes.filter(f => !myQuizzes.find(m => m.id === f.id)).map(q => ({ ...q, tag: 'Favorito' })),
@@ -276,9 +282,7 @@ export default function Planificador() {
         </div>
 
         <div style={{ marginBottom: '16px' }}>
-          <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '8px' }}>
-            Sets de preguntas <span style={{ color: '#9ca3af' }}>(hasta 3 en plan gratuito)</span>
-          </label>
+          <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '8px' }}>Sets de preguntas <span style={{ color: '#9ca3af' }}>(hasta 3 en plan gratuito)</span></label>
           {allAvailableQuizzes.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' }}>
               {allAvailableQuizzes.map(quiz => {
@@ -296,12 +300,10 @@ export default function Planificador() {
               })}
             </div>
           )}
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '6px' }}>
-            <input style={input} placeholder="Buscar sets públicos..." value={searchQ} onChange={e => { setSearchQ(e.target.value); searchQuizzes(e.target.value) }} />
-          </div>
-          {searching && <p style={{ fontSize: '12px', color: '#9ca3af' }}>Buscando...</p>}
+          <input style={input} placeholder="Buscar sets públicos..." value={searchQ} onChange={e => { setSearchQ(e.target.value); searchQuizzes(e.target.value) }} />
+          {searching && <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '6px' }}>Buscando...</p>}
           {searchResults.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
               {searchResults.filter(r => !allAvailableQuizzes.find(a => a.id === r.id)).map(quiz => {
                 const selected = form.selectedQuizzes.find(q => q.id === quiz.id)
                 return (
@@ -318,7 +320,7 @@ export default function Planificador() {
             </div>
           )}
           {allAvailableQuizzes.length === 0 && searchResults.length === 0 && !searching && (
-            <p style={{ fontSize: '12px', color: '#9ca3af' }}>No tenés sets propios ni favoritos. <a href="/explorar" style={{ color: '#059669' }}>Explorá quizzes públicos</a> y guardalos como favoritos.</p>
+            <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '6px' }}>No tenés sets propios ni favoritos. <a href="/explorar" style={{ color: '#059669' }}>Explorá quizzes públicos</a> y guardalos como favoritos.</p>
           )}
         </div>
 
@@ -395,13 +397,7 @@ export default function Planificador() {
           </div>
         )}
 
-        {showForm && (
-          <ExamForm
-            onSave={(force) => saveExam(force)}
-            onCancel={() => { setShowForm(false); setForm(emptyForm); setWarning(null) }}
-            isEdit={false}
-          />
-        )}
+        {showForm && <ExamForm onSave={(force) => saveExam(force)} onCancel={() => { setShowForm(false); setForm(emptyForm); setWarning(null) }} isEdit={false} />}
 
         {exams.length === 0 && !showForm && (
           <div style={{ border: '1px dashed #e5e7eb', borderRadius: '12px', padding: '60px 24px', textAlign: 'center' }}>
@@ -419,19 +415,12 @@ export default function Planificador() {
           const isEditing = editingExamId === exam.id
 
           if (isEditing) {
-            return (
-              <ExamForm
-                key={exam.id}
-                onSave={(force) => updateExam(exam.id, force)}
-                onCancel={cancelEdit}
-                isEdit={true}
-              />
-            )
+            return <ExamForm key={exam.id} onSave={(force) => updateExam(exam.id, force)} onCancel={cancelEdit} isEdit={true} />
           }
 
           return (
             <div key={exam.id} style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                 <div>
                   <div style={{ fontSize: '16px', fontWeight: '500', color: '#111', marginBottom: '4px' }}>{exam.title}</div>
                   <div style={{ fontSize: '12px', color: '#9ca3af' }}>
@@ -451,56 +440,78 @@ export default function Planificador() {
               {p && p.total_questions > 0 && (
                 <>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '14px' }}>
-                    <div style={{ background: '#f9fafb', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '18px', fontWeight: '500', color: '#111' }}>{p.total_questions}</div>
-                      <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '2px' }}>Preguntas totales</div>
-                    </div>
-                    <div style={{ background: '#f9fafb', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '18px', fontWeight: '500', color: '#059669' }}>{p.dominated_pct}%</div>
-                      <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '2px' }}>Dominadas</div>
-                    </div>
-                    <div style={{ background: '#f9fafb', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '18px', fontWeight: '500', color: p.due_today > 0 ? '#d97706' : '#111' }}>{p.due_today}</div>
-                      <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '2px' }}>Para repasar hoy</div>
-                    </div>
+                    <StatCard
+                      pct={p.seen_pct}
+                      actual={p.seen}
+                      total={p.total_questions}
+                      label="Vistas"
+                      color="#374151"
+                      tooltip="Preguntas que respondiste al menos una vez. Es tu punto de partida — cada sesión suma."
+                    />
+                    <StatCard
+                      pct={p.in_progress_pct}
+                      actual={p.in_progress}
+                      total={p.total_questions}
+                      label="En progreso"
+                      color="#d97706"
+                      tooltip="Las respondiste bien al menos una vez. El algoritmo todavía necesita confirmar que las dominás con una segunda sesión correcta."
+                    />
+                    <StatCard
+                      pct={p.dominated_pct}
+                      actual={p.dominated}
+                      total={p.total_questions}
+                      label="Dominadas"
+                      color="#059669"
+                      tooltip="Las respondiste correctamente en al menos 2 sesiones distintas. Estas las tenés. El algoritmo te las va a mostrar cada vez menos."
+                    />
                   </div>
 
                   <div style={{ height: '4px', background: '#f0f0f0', borderRadius: '4px', overflow: 'hidden', marginBottom: '14px' }}>
-                    <div style={{ height: '100%', width: p.dominated_pct + '%', background: '#059669', borderRadius: '4px' }} />
+                    <div style={{ height: '100%', display: 'flex', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div style={{ width: p.dominated_pct + '%', background: '#059669' }} />
+                      <div style={{ width: p.in_progress_pct + '%', background: '#fcd34d' }} />
+                      <div style={{ width: (p.seen_pct - p.dominated_pct - p.in_progress_pct) + '%', background: '#e5e7eb' }} />
+                    </div>
                   </div>
+
+                  {p.due_today > 0 && !p.goal_met && (
+                    <div style={{ fontSize: '11px', color: '#d97706', fontWeight: '500', marginBottom: '10px' }}>
+                      ⚡ {p.due_today} preguntas vencidas — el algoritmo las prioriza hoy
+                    </div>
+                  )}
 
                   {p.days_left > 0 && (
                     p.goal_met ? (
-                        <div style={{ background: '#f0fdf4', border: '1px solid #6ee7b7', borderRadius: '10px', padding: '14px 16px' }}>
+                      <div style={{ background: '#f0fdf4', border: '1px solid #6ee7b7', borderRadius: '10px', padding: '14px 16px' }}>
                         <div style={{ fontSize: '13px', fontWeight: '500', color: '#065f46', marginBottom: '4px' }}>
-                            ✅ Objetivo de hoy cumplido · {p.studied_today} preguntas completadas
+                          ✅ Objetivo de hoy cumplido · {p.studied_today} preguntas completadas
                         </div>
                         <div style={{ fontSize: '11px', color: '#059669', marginBottom: '10px' }}>
-                            ¿Querés adelantar? Podés hacer otras {p.questions_per_day} preguntas ahora.
+                          ¿Querés adelantar? Podés hacer otras {p.questions_per_day} preguntas ahora.
                         </div>
                         {exam.exam_quizzes?.length > 0 && (
-                            <a href={'/estudiar/' + exam.exam_quizzes[0].quiz_id + '?n=' + p.questions_per_day} style={{ fontSize: '12px', fontWeight: '500', color: '#065f46', background: '#d1fae5', border: '1px solid #6ee7b7', padding: '6px 14px', borderRadius: '8px', textDecoration: 'none' }}>
+                          <a href={'/estudiar/' + exam.exam_quizzes[0].quiz_id + '?n=' + p.questions_per_day} style={{ fontSize: '12px', fontWeight: '500', color: '#065f46', background: '#d1fae5', border: '1px solid #6ee7b7', padding: '6px 14px', borderRadius: '8px', textDecoration: 'none' }}>
                             Adelantar sesión
-                            </a>
+                          </a>
                         )}
-                        </div>
+                      </div>
                     ) : (
-                        <div style={{ background: mc.bg, borderRadius: '10px', padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ background: mc.bg, borderRadius: '10px', padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
                         <div>
-                            <div style={{ fontSize: '11px', color: mc.color, marginBottom: '2px', fontWeight: '500' }}>Recomendación para hoy</div>
-                            <div style={{ fontSize: '14px', fontWeight: '500', color: mc.color }}>{p.recommended_mode} · {p.questions_per_day} preguntas</div>
-                            <div style={{ fontSize: '11px', color: mc.color, opacity: 0.8, marginTop: '2px' }}>
-                            {p.unseen} preguntas sin dominar · {p.days_left} días disponibles
-                            </div>
+                          <div style={{ fontSize: '11px', color: mc.color, marginBottom: '2px', fontWeight: '500' }}>Recomendación para hoy</div>
+                          <div style={{ fontSize: '14px', fontWeight: '500', color: mc.color }}>{p.recommended_mode} · {p.questions_per_day} preguntas</div>
+                          <div style={{ fontSize: '11px', color: mc.color, opacity: 0.8, marginTop: '2px' }}>
+                            {p.unseen} preguntas sin ver · {p.days_left} días disponibles
+                          </div>
                         </div>
                         {exam.exam_quizzes?.length > 0 && (
-                            <a href={'/estudiar/' + exam.exam_quizzes[0].quiz_id + '?n=' + p.questions_per_day} style={{ fontSize: '12px', fontWeight: '500', color: 'white', background: '#059669', padding: '8px 14px', borderRadius: '8px', textDecoration: 'none', flexShrink: 0 }}>
+                          <a href={'/estudiar/' + exam.exam_quizzes[0].quiz_id + '?n=' + p.questions_per_day} style={{ fontSize: '12px', fontWeight: '500', color: 'white', background: '#059669', padding: '8px 14px', borderRadius: '8px', textDecoration: 'none', flexShrink: 0 }}>
                             Estudiar ahora
-                            </a>
+                          </a>
                         )}
-                        </div>
+                      </div>
                     )
-                    )}
+                  )}
                 </>
               )}
 
