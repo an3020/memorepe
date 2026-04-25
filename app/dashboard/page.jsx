@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import QuizProgressCard from '@/app/components/QuizProgressCard'
 
 export default async function Dashboard() {
   const cookieStore = await cookies()
@@ -213,10 +214,9 @@ export default async function Dashboard() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <span style={{ fontSize: '14px', fontWeight: '500', color: '#111' }}>Estudiados recientemente</span>
             </div>
-            {recentQuizzes.map(quiz => {
-              const p = progressMap[quiz.id]
-              return <QuizProgressCard key={quiz.id} quiz={quiz} p={p} />
-            })}
+            {recentQuizzes.map(quiz => (
+              <QuizProgressCard key={quiz.id} quiz={quiz} p={progressMap[quiz.id]} />
+            ))}
             <div style={{ height: '1px', background: '#f0f0f0', margin: '20px 0' }} />
           </>
         )}
@@ -227,7 +227,9 @@ export default async function Dashboard() {
         </div>
 
         {quizzesConProgreso && quizzesConProgreso.length > 0 ? (
-          quizzesConProgreso.map(quiz => <QuizProgressCard key={quiz.id} quiz={quiz} p={quiz.progreso} />)
+          quizzesConProgreso.map(quiz => (
+            <QuizProgressCard key={quiz.id} quiz={quiz} p={quiz.progreso} />
+          ))
         ) : (
           <div style={{ border: '1px dashed #e5e7eb', borderRadius: '12px', padding: '40px', textAlign: 'center', marginBottom: '16px' }}>
             <p style={{ fontSize: '14px', fontWeight: '500', color: '#111', marginBottom: '6px' }}>No tenes quizzes activos</p>
@@ -262,62 +264,6 @@ export default async function Dashboard() {
         )}
 
       </div>
-    </div>
-  )
-}
-
-function QuizProgressCard({ quiz, p }) {
-  const tieneProgreso = p && p.seen > 0
-  return (
-    <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '14px 16px', marginBottom: '10px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: tieneProgreso ? '12px' : '0' }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '13px', fontWeight: '500', color: '#111', marginBottom: '3px' }}>{quiz.title}</div>
-          <div style={{ fontSize: '11px', color: '#9ca3af' }}>
-            {quiz.question_count} preguntas{quiz.subject ? ' · ' + quiz.subject : ''}
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-          <a href={'/quiz/' + quiz.id + '/gestionar'} style={{ fontSize: '11px', color: '#6b7280', textDecoration: 'none', border: '1px solid #e5e7eb', padding: '5px 10px', borderRadius: '6px' }}>
-            Gestionar
-          </a>
-          <a href={'/estudiar/' + quiz.id + '/inicio'} style={{ fontSize: '12px', fontWeight: '500', color: '#065f46', background: '#d1fae5', border: '1px solid #6ee7b7', padding: '5px 12px', borderRadius: '6px', textDecoration: 'none' }}>
-            {tieneProgreso ? 'Continuar' : 'Estudiar'}
-          </a>
-        </div>
-      </div>
-      {tieneProgreso && (
-        <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '10px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', marginBottom: '8px' }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '15px', fontWeight: '500', color: '#374151' }}>{p.seen_pct}%</div>
-              <div style={{ fontSize: '10px', color: '#9ca3af' }}>{p.seen}/{p.total}</div>
-              <div style={{ fontSize: '10px', color: '#6b7280' }}>Vistas</div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '15px', fontWeight: '500', color: '#d97706' }}>{p.in_progress_pct}%</div>
-              <div style={{ fontSize: '10px', color: '#9ca3af' }}>{p.in_progress}/{p.total}</div>
-              <div style={{ fontSize: '10px', color: '#6b7280' }}>En progreso</div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '15px', fontWeight: '500', color: '#059669' }}>{p.dominated_pct}%</div>
-              <div style={{ fontSize: '10px', color: '#9ca3af' }}>{p.dominated}/{p.total}</div>
-              <div style={{ fontSize: '10px', color: '#6b7280' }}>Dominadas</div>
-            </div>
-          </div>
-          <div style={{ height: '4px', background: '#f0f0f0', borderRadius: '4px', overflow: 'hidden' }}>
-            <div style={{ height: '100%', display: 'flex', borderRadius: '4px', overflow: 'hidden' }}>
-              <div style={{ width: p.dominated_pct + '%', background: '#059669' }} />
-              <div style={{ width: p.in_progress_pct + '%', background: '#fcd34d' }} />
-            </div>
-          </div>
-          {p.due_today > 0 && (
-            <div style={{ fontSize: '11px', color: '#d97706', fontWeight: '500', marginTop: '6px' }}>
-              ⚡ {p.due_today} para repasar hoy
-            </div>
-          )}
-        </div>
-      )}
     </div>
   )
 }
