@@ -73,13 +73,82 @@ export default async function Dashboard() {
   const xpEnNivel = xpTotal % 200
   const xpPct = (xpEnNivel / 200) * 100
 
-  const quizzesConProgreso = await Promise.all(
-    (quizzes || []).map(async (quiz) => {
-      const { data: progreso } = await supabase
-        .rpc('get_quiz_progress', { p_user_id: user.id, p_quiz_id: quiz.id })
-      return { ...quiz, progreso }
-    })
-  )
+  const recentQuizIds = []
+  const seenIds = new Set()
+  for (const s of sessions || []) {
+    if (!seenIds.has(s.quiz_id) && recentQuizIds.length < 5) {
+      seenIds.add(s.quiz_id)
+      recentQuizIds.push(s.quiz_id)
+    }
+  }
+
+  let recentQuizzes = []
+  if (recentQuizIds.length > 0) {
+    const { data: recentData } = await supabase
+      .from('quizzes')
+      .select('*')
+      .in('id', recentQuizIds)
+    recentQuizzes = recentQuizIds
+      .map(id => recentData?.find(q => q.id === id))
+      .filter(Boolean)
+  }
+
+  const allQuizIds = [...new Set([
+    ...recentQuizIds,
+    ...(quizzes || []).map(q => q.id)
+  ])]
+
+  let progressMap = {}
+  if (allQuizIds.length > 0) {
+    const { data: progressData } = await supabase
+      .rpc('get_user_quizzes_progress', { p_user_id: user.id, p_quiz_ids: allQuizIds })
+    if (progressData) {
+      progressData.forEach(p => { progressMap[p.quiz_id] = p })
+    }
+  }
+
+  const quizzesConProgreso = (quizzes || []).map(quiz => ({
+    ...quiz,
+    progreso: progressMap[quiz.id]
+  }))
+
+  function QuizCard({ quiz, progreso }) {
+    const tieneProgreso = progreso && progreso.seen > 0
+    return (
+      <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '14px 16px', marginBottom: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: tieneProgreso ? '10px' : '0' }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '13px', fontWeight: '500', color: '#111', marginBottom: '3px' }}>{quiz.title}</div>
+            <div style={{ fontSize: '11px', color: '#9ca3af' }}>
+              {quiz.question_count} preguntas
+              {quiz.subject ? ' · ' + quiz.subject : ''}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+            <a href={'/quiz/' + quiz.id + '/gestionar'} style={{ fontSize: '11px', color: '#6b7280', textDecoration: 'none', border: '1px solid #e5e7eb', padding: '5px 10px', borderRadius: '6px' }}>
+              Gestionar
+            </a>
+            <a href={'/estudiar/' + quiz.id + '/inicio'} style={{ fontSize: '12px', fontWeight: '500', color: '#065f46', background: '#d1fae5', border: '1px solid #6ee7b7', padding: '5px 12px', borderRadius: '6px', textDecoration: 'none' }}>
+              {tieneProgreso ? 'Continuar' : 'Estudiar'}
+            </a>
+          </div>
+        </div>
+        {tieneProgreso && (
+          <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '10px' }}>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', fontSize: '11px', marginBottom: '6px' }}>
+              <span style={{ color: '#6b7280' }}>Round {progreso.round}</span>
+              <span style={{ color: '#059669', fontWeight: '500' }}>{progreso.dominated_pct}% dominadas</span>
+              {progreso.due_today > 0 && <span style={{ color: '#d97706', fontWeight: '500' }}>{progreso.due_today} para repasar hoy</span>}
+              {progreso.unseen > 0 && <span style={{ color: '#9ca3af' }}>{progreso.unseen} sin ver</span>}
+            </div>
+            <div style={{ height: '4px', background: '#f0f0f0', borderRadius: '4px', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: progreso.dominated_pct + '%', background: '#059669', borderRadius: '4px' }} />
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: 'white', fontFamily: 'Arial, sans-serif' }}>
@@ -158,64 +227,27 @@ export default async function Dashboard() {
           </div>
         </div>
 
+        {recentQuizzes.length > 0 && (
+          <>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <span style={{ fontSize: '14px', fontWeight: '500', color: '#111' }}>Estudiados recientemente</span>
+            </div>
+            {recentQuizzes.map(quiz => (
+              <QuizCard key={quiz.id} quiz={quiz} progreso={progressMap[quiz.id]} />
+            ))}
+            <div style={{ height: '1px', background: '#f0f0f0', margin: '20px 0' }} />
+          </>
+        )}
+
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
           <span style={{ fontSize: '14px', fontWeight: '500', color: '#111' }}>Mis quizzes</span>
           <a href="/crear-quiz" style={{ fontSize: '12px', color: '#059669', textDecoration: 'none' }}>+ Crear nuevo</a>
         </div>
 
         {quizzesConProgreso && quizzesConProgreso.length > 0 ? (
-          quizzesConProgreso.map(quiz => {
-            const p = quiz.progreso
-            const tieneProgreso = p && p.seen > 0
-            return (
-              <div key={quiz.id} style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '14px 16px', marginBottom: '10px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: tieneProgreso ? '10px' : '0' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '13px', fontWeight: '500', color: '#111', marginBottom: '3px' }}>{quiz.title}</div>
-                    <div style={{ fontSize: '11px', color: '#9ca3af' }}>
-                      {quiz.question_count} preguntas
-                      {quiz.subject ? ' · ' + quiz.subject : ''}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                    <a href={'/quiz/' + quiz.id + '/gestionar'} style={{ fontSize: '11px', color: '#6b7280', textDecoration: 'none', border: '1px solid #e5e7eb', padding: '5px 10px', borderRadius: '6px' }}>
-                      Gestionar
-                    </a>
-                    <a href={'/estudiar/' + quiz.id + '/inicio'} style={{ fontSize: '12px', fontWeight: '500', color: '#065f46', background: '#d1fae5', border: '1px solid #6ee7b7', padding: '5px 12px', borderRadius: '6px', textDecoration: 'none' }}>
-                      Estudiar
-                    </a>
-                  </div>
-                </div>
-
-                {tieneProgreso && (
-                  <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '10px' }}>
-                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', fontSize: '11px' }}>
-                      <span style={{ color: '#6b7280' }}>
-                        Round {p.round}
-                      </span>
-                      <span style={{ color: '#059669', fontWeight: '500' }}>
-                        {p.dominated_pct}% dominadas
-                      </span>
-                      {p.due_today > 0 && (
-                        <span style={{ color: '#d97706', fontWeight: '500' }}>
-                          {p.due_today} para repasar hoy
-                        </span>
-                      )}
-                      {p.unseen > 0 && (
-                        <span style={{ color: '#9ca3af' }}>
-                          {p.unseen} sin ver
-                        </span>
-                      )}
-                    </div>
-
-                    <div style={{ marginTop: '8px', height: '4px', background: '#f0f0f0', borderRadius: '4px', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: p.dominated_pct + '%', background: '#059669', borderRadius: '4px' }} />
-                    </div>
-                  </div>
-                )}
-              </div>
-            )
-          })
+          quizzesConProgreso.map(quiz => (
+            <QuizCard key={quiz.id} quiz={quiz} progreso={quiz.progreso} />
+          ))
         ) : (
           <div style={{ border: '1px dashed #e5e7eb', borderRadius: '12px', padding: '40px', textAlign: 'center', marginBottom: '16px' }}>
             <p style={{ fontSize: '14px', fontWeight: '500', color: '#111', marginBottom: '6px' }}>No tenes quizzes activos</p>
