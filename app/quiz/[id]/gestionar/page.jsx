@@ -263,11 +263,27 @@ export default function GestionarQuiz({ params }) {
                   <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '8px' }}>
                     Pregunta: {r.questions?.body?.slice(0, 80)}{r.questions?.body?.length > 80 ? '...' : ''}
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
                     <span style={{ fontSize: '11px', color: '#9ca3af' }}>{new Date(r.created_at).toLocaleDateString('es-AR')}</span>
-                    <button onClick={() => resolveReport(r.id)} style={{ fontSize: '11px', color: '#065f46', background: '#d1fae5', border: '1px solid #6ee7b7', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer' }}>
-                      Marcar como resuelto
-                    </button>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button
+                        onClick={() => {
+                          const pregunta = questions.find(q => q.id === r.question_id)
+                          if (pregunta) {
+                            startEditQuestion(pregunta)
+                            setTimeout(() => {
+                              document.getElementById('question-' + pregunta.id)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                            }, 100)
+                          }
+                        }}
+                        style={{ fontSize: '11px', color: '#0369a1', background: '#e0f2fe', border: '1px solid #7dd3fc', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer' }}
+                      >
+                        Editar pregunta
+                      </button>
+                      <button onClick={() => resolveReport(r.id)} style={{ fontSize: '11px', color: '#065f46', background: '#d1fae5', border: '1px solid #6ee7b7', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer' }}>
+                        Marcar como resuelto
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -352,8 +368,7 @@ export default function GestionarQuiz({ params }) {
             const isEditing = editingQuestion?.id === q.id
 
             return (
-              <div key={q.id} style={{ border: '1px solid', borderColor: isEditing ? '#059669' : qReports.length > 0 ? '#fecaca' : '#e5e7eb', borderRadius: '10px', padding: '12px 16px', marginBottom: '8px' }}>
-
+              <div key={q.id} id={'question-' + q.id} style={{ border: '1px solid', borderColor: isEditing ? '#059669' : qReports.length > 0 ? '#fecaca' : '#e5e7eb', borderRadius: '10px', padding: '12px 16px', marginBottom: '8px' }}>
                 {isEditing ? (
                   <div>
                     <div style={{ fontSize: '12px', fontWeight: '500', color: '#059669', marginBottom: '10px' }}>Editando pregunta {idx + 1}</div>
