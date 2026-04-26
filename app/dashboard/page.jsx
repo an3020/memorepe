@@ -124,6 +124,7 @@ export default async function Dashboard() {
           <a href="/planificador" style={{ fontSize: '13px', color: '#9ca3af', textDecoration: 'none' }}>Planificador</a>
           <a href="/crear-quiz" style={{ fontSize: '13px', color: '#9ca3af', textDecoration: 'none' }}>Crear quiz</a>
           <a href="/perfil" style={{ fontSize: '13px', color: '#9ca3af', textDecoration: 'none' }}>Perfil</a>
+          <a href="/ayuda" style={{ fontSize: '13px', color: '#9ca3af', textDecoration: 'none' }}>Ayuda</a>
           <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#d1fae5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '500', color: '#065f46' }}>
             {avatar}
           </div>

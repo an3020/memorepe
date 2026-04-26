@@ -29,6 +29,7 @@ export default function Planificador() {
   const [searchResults, setSearchResults] = useState([])
   const [searching, setSearching] = useState(false)
   const [warning, setWarning] = useState(null)
+  const [mostrarBanner, setMostrarBanner] = useState(false)
 
   const emptyForm = { title: '', exam_date: '', weekly_reminder: false, selectedQuizzes: [], dias: [0, 1, 2, 3, 4], minutos: 30 }
   const [form, setForm] = useState(emptyForm)
@@ -75,6 +76,10 @@ export default function Planificador() {
         .eq('user_id', user.id)
       setFavoriteQuizzes(favsData?.map(f => f.quizzes).filter(Boolean) || [])
 
+      if (!localStorage.getItem('planificador_banner_visto')) {
+        setMostrarBanner(true)
+      }
+
       setLoading(false)
     }
     load()
@@ -105,7 +110,7 @@ export default function Planificador() {
       const already = prev.selectedQuizzes.find(q => q.id === quiz.id)
       if (already) return { ...prev, selectedQuizzes: prev.selectedQuizzes.filter(q => q.id !== quiz.id) }
       if (prev.selectedQuizzes.length >= 3) {
-        setMsg('En el plan gratuito podés agregar hasta 3 sets de preguntas.')
+        setMsg('En el plan gratuito puedes agregar hasta 3 sets de preguntas.')
         setTimeout(() => setMsg(''), 3000)
         return prev
       }
@@ -286,7 +291,7 @@ export default function Planificador() {
             </div>
           )}
           {allAvailableQuizzes.length === 0 && searchResults.length === 0 && !searching && (
-            <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '6px' }}>No tenés sets propios ni favoritos. <a href="/explorar" style={{ color: '#059669' }}>Explorá quizzes públicos</a> y guardalos como favoritos.</p>
+            <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '6px' }}>No tienes sets propios ni favoritos. <a href="/explorar" style={{ color: '#059669' }}>Explora quizzes públicos</a> y guárdalos como favoritos.</p>
           )}
         </div>
 
@@ -340,15 +345,36 @@ export default function Planificador() {
           <a href="/dashboard" style={{ fontSize: '13px', color: '#9ca3af', textDecoration: 'none' }}>Dashboard</a>
           <a href="/explorar" style={{ fontSize: '13px', color: '#9ca3af', textDecoration: 'none' }}>Explorar</a>
           <a href="/planificador" style={{ fontSize: '13px', fontWeight: '500', color: '#111', textDecoration: 'none' }}>Planificador</a>
+          <a href="/ayuda" style={{ fontSize: '13px', color: '#9ca3af', textDecoration: 'none' }}>Ayuda</a>
         </div>
       </nav>
 
       <div style={{ maxWidth: '680px', margin: '0 auto', padding: '32px 24px' }}>
 
+        {mostrarBanner && (
+          <div style={{ background: '#f0fdf4', border: '1px solid #6ee7b7', borderRadius: '12px', padding: '16px 20px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
+            <div>
+              <div style={{ fontSize: '14px', fontWeight: '500', color: '#065f46', marginBottom: '4px' }}>
+                📅 El planificador calcula exactamente cuánto estudiar cada día
+              </div>
+              <div style={{ fontSize: '13px', color: '#059669', lineHeight: '1.5' }}>
+                Ingresa la fecha de tu examen y tus sets de preguntas. Memorepe te dice cuánto estudiar cada día para llegar preparado, con un margen para los días que no puedas estudiar.
+              </div>
+              <a href="/ayuda" style={{ fontSize: '12px', color: '#059669', textDecoration: 'underline', marginTop: '6px', display: 'inline-block' }}>Saber más →</a>
+            </div>
+            <button
+              onClick={() => { localStorage.setItem('planificador_banner_visto', '1'); setMostrarBanner(false) }}
+              style={{ fontSize: '18px', color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, lineHeight: 1 }}
+            >
+              ×
+            </button>
+          </div>
+        )}
+
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '28px' }}>
           <div>
             <h1 style={{ fontSize: '20px', fontWeight: '500', color: '#111', marginBottom: '4px' }}>Planificador de exámenes</h1>
-            <p style={{ fontSize: '13px', color: '#9ca3af' }}>Organizá tu estudio y llegá preparado al examen.</p>
+            <p style={{ fontSize: '13px', color: '#9ca3af' }}>Organiza tu estudio y llega preparado al examen.</p>
           </div>
           {!showForm && !editingExamId && (
             <button onClick={() => setShowForm(true)} style={{ padding: '8px 16px', fontSize: '13px', fontWeight: '500', color: 'white', background: '#059669', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
@@ -367,8 +393,8 @@ export default function Planificador() {
 
         {exams.length === 0 && !showForm && (
           <div style={{ border: '1px dashed #e5e7eb', borderRadius: '12px', padding: '60px 24px', textAlign: 'center' }}>
-            <p style={{ fontSize: '16px', fontWeight: '500', color: '#111', marginBottom: '8px' }}>No tenés exámenes planificados</p>
-            <p style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '20px' }}>Creá tu primer plan y Memorepe te dice cuánto estudiar cada día para llegar preparado.</p>
+            <p style={{ fontSize: '16px', fontWeight: '500', color: '#111', marginBottom: '8px' }}>No tienes exámenes planificados</p>
+            <p style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '20px' }}>Crea tu primer plan y Memorepe te dice cuánto estudiar cada día para llegar preparado.</p>
             <button onClick={() => setShowForm(true)} style={{ padding: '10px 20px', fontSize: '13px', fontWeight: '500', color: 'white', background: '#059669', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
               Crear mi primer plan
             </button>
