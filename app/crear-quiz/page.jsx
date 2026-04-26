@@ -61,7 +61,7 @@ export default function CrearQuiz() {
       return
     }
 
-    router.push(`/quiz/${data.id}/editar`)
+    router.push(`/quiz/${data.id}/agregar`)
   }
 
   const input = {
