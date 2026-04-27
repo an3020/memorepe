@@ -43,7 +43,7 @@ function buildQueue(questionsData, progressData, limite) {
     if (a._interval !== b._interval) return a._interval - b._interval
     return Math.random() - 0.5
   })
-
+  
   return limite ? scored.slice(0, limite) : scored
 }
 
@@ -93,8 +93,12 @@ function EstudiarInner({ params }) {
       const { data: qData } = await supabase
         .from('questions').select('*, options(*)').eq('quiz_id', id).order('order')
 
+      const questionIds = qData?.map(q => q.id) || []
       const { data: progressData } = await supabase
-        .from('user_question_progress').select('*').eq('user_id', user.id)
+        .from('user_question_progress')
+        .select('*')
+        .eq('user_id', user.id)
+        .in('question_id', questionIds)
 
       setQuestionsData(qData || [])
       const queue = buildQueue(qData || [], progressData || [], limite)
@@ -200,8 +204,12 @@ function EstudiarInner({ params }) {
   async function continuar() {
     const limite = modoN && modoN !== 'all' ? parseInt(modoN) : null
 
+    const questionIds = questionsData.map(q => q.id)
     const { data: progressData } = await supabase
-      .from('user_question_progress').select('*').eq('user_id', userId)
+      .from('user_question_progress')
+      .select('*')
+      .eq('user_id', userId)
+      .in('question_id', questionIds)
 
     const allDoneIds = new Set([...sessionDoneIds, ...questions.map(q => q.id)])
     const remainingData = questionsData.filter(q => !allDoneIds.has(q.id))
