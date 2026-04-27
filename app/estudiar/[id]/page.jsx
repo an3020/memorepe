@@ -24,13 +24,12 @@ function sm2(quality, repetitions, easiness, interval) {
 function buildQueue(questionsData, progressData, limite) {
   const progressMap = {}
   progressData?.forEach(p => { progressMap[p.question_id] = p })
-  const now = new Date()
-  const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0]
+  const today = new Date().toISOString().split('T')[0]
 
   const scored = questionsData.map(q => {
     const p = progressMap[q.id]
     const isDue = !p || p.next_review_date <= today
-    const updatedToday = p?.updated_at?.startsWith(today)
+    const updatedToday = p?.updated_at?.substring(0, 10) === today
     const acertadaHoy = updatedToday && p?.last_quality >= 3
     const priority = !p ? 0 : acertadaHoy ? 3 : isDue ? 1 : 2
     return {
