@@ -21,6 +21,33 @@ function sm2(quality, repetitions, easiness, interval) {
   return { repetitions, easiness, interval, nextDate: nextDate.toISOString().split('T')[0] }
 }
 
+function buildQueue(questionsData, progressData, limite) {
+  const progressMap = {}
+  progressData?.forEach(p => { progressMap[p.question_id] = p })
+  const now = new Date()
+  const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0]
+
+  const scored = questionsData.map(q => {
+    const p = progressMap[q.id]
+    const isDue = !p || p.next_review_date <= today
+    const updatedToday = p?.updated_at?.startsWith(today)
+    const acertadaHoy = updatedToday && p?.last_quality >= 3
+    const priority = !p ? 0 : acertadaHoy ? 3 : isDue ? 1 : 2
+    return {
+      ...q,
+      options: [...q.options].sort(() => Math.random() - 0.5),
+      _priority: priority,
+      _interval: p?.interval_days || 0,
+    }
+  }).sort((a, b) => {
+    if (a._priority !== b._priority) return a._priority - b._priority
+    if (a._interval !== b._interval) return a._interval - b._interval
+    return Math.random() - 0.5
+  })
+
+  return limite ? scored.slice(0, limite) : scored
+}
+
 function EstudiarInner({ params }) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -28,8 +55,8 @@ function EstudiarInner({ params }) {
 
   const [quizId, setQuizId] = useState(null)
   const [quiz, setQuiz] = useState(null)
+  const [questionsData, setQuestionsData] = useState([])
   const [questions, setQuestions] = useState([])
-  const [allQuestions, setAllQuestions] = useState([])
   const [current, setCurrent] = useState(0)
   const [selected, setSelected] = useState([])
   const [confirmed, setConfirmed] = useState(false)
@@ -45,6 +72,7 @@ function EstudiarInner({ params }) {
   const [reportComment, setReportComment] = useState('')
   const [reportSent, setReportSent] = useState(false)
   const [reportSending, setReportSending] = useState(false)
+  const [sessionDoneIds, setSessionDoneIds] = useState(new Set())
 
   useEffect(() => {
     async function load() {
@@ -63,36 +91,19 @@ function EstudiarInner({ params }) {
         .from('quizzes').select('*').eq('id', id).single()
       setQuiz(quizData)
 
-      const { data: questionsData } = await supabase
+      const { data: qData } = await supabase
         .from('questions').select('*, options(*)').eq('quiz_id', id).order('order')
 
       const { data: progressData } = await supabase
         .from('user_question_progress').select('*').eq('user_id', user.id)
 
-      const progressMap = {}
-      progressData?.forEach(p => { progressMap[p.question_id] = p })
-
-      const today = new Date().toISOString().split('T')[0]
-
-      const shuffled = questionsData?.map(q => {
-        const p = progressMap[q.id]
-        const isDue = !p || p.next_review_date <= today
-        const priority = !p ? 0 : isDue ? 1 : 2
-        return {
-          ...q,
-          options: [...q.options].sort(() => Math.random() - 0.5),
-          _priority: priority,
-          _interval: p?.interval_days || 0,
-        }
-      }).sort((a, b) => a._priority - b._priority || a._interval - b._interval)
-
-      setAllQuestions(shuffled || [])
-      const limited = limite ? shuffled?.slice(0, limite) : shuffled
-      setQuestions(limited || [])
+      setQuestionsData(qData || [])
+      const queue = buildQueue(qData || [], progressData || [], limite)
+      setQuestions(queue)
 
       const { data: sess } = await supabase
         .from('study_sessions')
-        .insert({ user_id: user.id, quiz_id: id, total_questions: limited?.length || 0 })
+        .insert({ user_id: user.id, quiz_id: id, total_questions: queue.length })
         .select().single()
       if (sess) setSessionId(sess.id)
 
@@ -170,6 +181,8 @@ function EstudiarInner({ params }) {
 
   async function next() {
     if (current + 1 >= questions.length) {
+      const newDoneIds = new Set([...sessionDoneIds, ...questions.map(q => q.id)])
+      setSessionDoneIds(newDoneIds)
       await finishSession(session.correct, session.wrong, session.partial)
       setFinished(true)
     } else {
@@ -187,14 +200,22 @@ function EstudiarInner({ params }) {
 
   async function continuar() {
     const limite = modoN && modoN !== 'all' ? parseInt(modoN) : null
-    const doneIds = new Set(questions.map(q => q.id))
-    const remaining = allQuestions.filter(q => !doneIds.has(q.id))
-    if (remaining.length === 0) { router.push('/dashboard'); return }
-    const nextBatch = limite ? remaining.slice(0, limite) : remaining
+
+    const { data: progressData } = await supabase
+      .from('user_question_progress').select('*').eq('user_id', userId)
+
+    const allDoneIds = new Set([...sessionDoneIds, ...questions.map(q => q.id)])
+    const remainingData = questionsData.filter(q => !allDoneIds.has(q.id))
+
+    if (remainingData.length === 0) { router.push('/dashboard'); return }
+
+    const nextBatch = buildQueue(remainingData, progressData || [], limite)
+
     const { data: sess } = await supabase.from('study_sessions')
       .insert({ user_id: userId, quiz_id: quizId, total_questions: nextBatch.length })
       .select().single()
     if (sess) setSessionId(sess.id)
+
     setQuestions(nextBatch)
     setCurrent(0)
     setSelected([])
@@ -244,8 +265,8 @@ function EstudiarInner({ params }) {
   const modoNombres = { '10': 'Calentamiento', '30': 'Sesion express', '50': 'Sesion completa', '100': 'Maraton', 'all': 'Repaso total' }
   const modoNombre = modoNombres[modoN] || 'Sesion'
   const limite = modoN && modoN !== 'all' ? parseInt(modoN) : null
-  const doneIds = finished ? new Set(questions.map(q => q.id)) : new Set()
-  const remaining = allQuestions.filter(q => !doneIds.has(q.id))
+  const allDoneIds = finished ? new Set([...sessionDoneIds, ...questions.map(q => q.id)]) : new Set()
+  const remaining = questionsData.filter(q => !allDoneIds.has(q.id))
   const hasMas = remaining.length > 0
 
   if (finished) {
