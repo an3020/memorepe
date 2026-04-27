@@ -73,10 +73,9 @@ export default function Home() {
           memo<span style={{ color: '#059669' }}>repe</span>
         </div>
         <div style={{ display: 'flex', gap: '16px' }}>
-          <span style={{ fontSize: '12px', color: '#d1d5db', cursor: 'pointer' }}>Terminos</span>
-          <span style={{ fontSize: '12px', color: '#d1d5db', cursor: 'pointer' }}>Privacidad</span>
-          <span style={{ fontSize: '12px', color: '#d1d5db', cursor: 'pointer' }}>Contacto</span>
-
+          <a href="/terminos" style={{ fontSize: '12px', color: '#d1d5db', textDecoration: 'none' }}>Términos</a>
+          <a href="/privacidad" style={{ fontSize: '12px', color: '#d1d5db', textDecoration: 'none' }}>Privacidad</a>
+          <a href="mailto:hola@memorepe.com" style={{ fontSize: '12px', color: '#d1d5db', textDecoration: 'none' }}>Contacto</a>
         </div>
       </footer>
 
