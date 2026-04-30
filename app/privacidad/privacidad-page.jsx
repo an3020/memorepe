@@ -66,7 +66,7 @@ export default function Privacidad() {
               <li>Solicitar la eliminación de tu cuenta y todos tus datos.</li>
               <li>Exportar tu contenido.</li>
             </ul>
-            <p style={{ marginTop: '12px' }}>Para ejercer cualquiera de estos derechos, contáctanos en <strong>privacidad@memorepe.com</strong>.</p>
+            <p style={{ marginTop: '12px' }}>Para ejercer cualquiera de estos derechos, contáctanos en <strong>memorepe@gmail.com</strong>.</p>
           </div>
 
           <div>
@@ -86,7 +86,7 @@ export default function Privacidad() {
 
           <div>
             <h2 style={{ fontSize: '16px', fontWeight: '500', color: '#111', marginBottom: '12px' }}>11. Contacto</h2>
-            <p>Para cualquier consulta relacionada con esta política de privacidad, escríbenos a <strong>privacidad@memorepe.com</strong>.</p>
+            <p>Para cualquier consulta relacionada con esta política de privacidad, escríbenos a <strong>memorepe@gmail.com</strong>.</p>
           </div>
 
         </div>

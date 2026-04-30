@@ -84,7 +84,7 @@ export default function Terminos() {
 
           <div>
             <h2 style={{ fontSize: '16px', fontWeight: '500', color: '#111', marginBottom: '12px' }}>12. Contacto</h2>
-            <p>Para consultas relacionadas con estos términos, contáctanos en <strong>legal@memorepe.com</strong>.</p>
+            <p>Para consultas relacionadas con estos términos, contáctanos en <strong>memorepe@gmail.com</strong>.</p>
           </div>
 
         </div>
