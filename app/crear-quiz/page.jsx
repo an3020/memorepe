@@ -17,7 +17,6 @@ export default function CrearQuiz() {
     category: '',
     language: 'es',
     visibility: 'public',
-    institution: '',
     faculty: '',
     subject: '',
     teacher: '',
@@ -28,6 +27,18 @@ export default function CrearQuiz() {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
+  function generateSlug(title) {
+    return title
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s-]/g, '')
+      .trim()
+      .replace(/\s+/g, '-')
+      .slice(0, 60)
+      + '-' + Math.random().toString(36).substring(2, 10)
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     setLoading(true)
@@ -35,6 +46,9 @@ export default function CrearQuiz() {
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/'); return }
+
+    const slug = generateSlug(form.title)
+    console.log('slug generado:', slug)
 
     const { data, error: insertError } = await supabase
       .from('quizzes')
@@ -50,6 +64,7 @@ export default function CrearQuiz() {
         subject: form.subject,
         teacher: form.teacher,
         year_course: form.year_course,
+        slug: slug,
       })
       .select()
       .single()
@@ -73,6 +88,7 @@ export default function CrearQuiz() {
     background: 'white',
     color: '#111',
     fontFamily: 'Arial, sans-serif',
+    boxSizing: 'border-box',
   }
 
   const label = {
@@ -82,14 +98,11 @@ export default function CrearQuiz() {
     marginBottom: '5px',
   }
 
-  const field = {
-    marginBottom: '16px',
-  }
+  const field = { marginBottom: '16px' }
 
   return (
     <div style={{ minHeight: '100vh', background: 'white', fontFamily: 'Arial, sans-serif' }}>
 
-      {/* Nav */}
       <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 24px', borderBottom: '1px solid #f0f0f0' }}>
         <div style={{ fontSize: '18px', fontWeight: '500', letterSpacing: '-0.5px' }}>
           memo<span style={{ color: '#059669' }}>repe</span>
@@ -175,10 +188,7 @@ export default function CrearQuiz() {
                   type="button"
                   onClick={() => setForm({ ...form, visibility: v.value })}
                   style={{
-                    flex: 1,
-                    padding: '8px',
-                    fontSize: '12px',
-                    border: '1px solid',
+                    flex: 1, padding: '8px', fontSize: '12px', border: '1px solid',
                     borderColor: form.visibility === v.value ? '#059669' : '#e5e7eb',
                     borderRadius: '8px',
                     background: form.visibility === v.value ? '#d1fae5' : 'white',
@@ -193,12 +203,7 @@ export default function CrearQuiz() {
             </div>
           </div>
 
-          <div style={{ height: '1px', background: '#f0f0f0', margin: '20px 0' }}></div>
-
-          <div style={field}>
-            <label style={label}>Institución educativa (opcional)</label>
-            <input style={input} name="institution" value={form.institution} onChange={handleChange} placeholder="Ej: Universidad de Buenos Aires" />
-          </div>
+          <div style={{ height: '1px', background: '#f0f0f0', margin: '20px 0' }} />
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
             <div>
