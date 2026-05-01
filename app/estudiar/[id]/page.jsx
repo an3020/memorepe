@@ -283,7 +283,9 @@ function EstudiarInner({ params }) {
     return (
       <div style={{ minHeight: '100vh', background: 'white', fontFamily: 'Arial, sans-serif' }}>
         <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 24px', borderBottom: '1px solid #f0f0f0' }}>
-          <div style={{ fontSize: '16px', fontWeight: '500' }}>memo<span style={{ color: '#059669' }}>repe</span></div>
+          <a href="/dashboard" style={{ fontSize: '18px', fontWeight: '500', textDecoration: 'none', color: '#111' }}>
+          memo<span style={{ color: '#059669' }}>repe</span>
+          </a>
         </nav>
         <div style={{ maxWidth: '480px', margin: '0 auto', padding: '48px 24px', textAlign: 'center' }}>
           <div style={{ fontSize: '48px', marginBottom: '16px' }}>{pct >= 80 ? '🎯' : pct >= 50 ? '📈' : '💪'}</div>

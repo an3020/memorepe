@@ -93,9 +93,9 @@ export default async function Explorar({ searchParams }) {
   return (
     <div style={{ minHeight: '100vh', background: 'white', fontFamily: 'Arial, sans-serif' }}>
       <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 24px', borderBottom: '1px solid #f0f0f0' }}>
-        <div style={{ fontSize: '18px', fontWeight: '500' }}>
+        <a href="/dashboard" style={{ fontSize: '18px', fontWeight: '500', textDecoration: 'none', color: '#111' }}>
           memo<span style={{ color: '#059669' }}>repe</span>
-        </div>
+        </a>
         <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
           <a href="/dashboard" style={{ fontSize: '13px', color: '#9ca3af', textDecoration: 'none' }}>Inicio</a>
           <a href="/explorar" style={{ fontSize: '13px', fontWeight: '500', color: '#111', textDecoration: 'none' }}>Explorar</a>
