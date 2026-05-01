@@ -5,6 +5,46 @@ import { createClient } from '@/lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import LoadingScreen from '@/app/components/LoadingScreen'
 
+const MENSAJES_MOTIVADORES = [
+  "El conocimiento que repetís hoy es el que no olvidás mañana.",
+  "Cada sesión es un ladrillo. Seguís construyendo.",
+  "La memoria no es talento, es entrenamiento.",
+  "Un día más, un poco más sólido.",
+  "Lo que practicás en calma lo recordás bajo presión.",
+  "No se trata de cuánto estudiás, sino de cuán seguido volvés.",
+  "El cerebro aprende mejor en pequeñas dosis. Vas por buen camino.",
+  "Hoy fue un buen día para tu memoria.",
+  "Constancia > intensidad. Lo estás haciendo bien.",
+  "Cada pregunta que respondiste hoy refuerza una conexión nueva.",
+  "El repaso espaciado es la herramienta más poderosa que existe. Y la estás usando.",
+  "No importa cómo salió, importa que volviste.",
+  "La curva del olvido trabaja en tu contra. Vos trabajás en tu favor.",
+  "Estudiar así es difícil. Por eso funciona.",
+  "Tu yo del día del examen te lo va a agradecer.",
+]
+
+function getMensaje(sessionId) {
+  if (!sessionId) return MENSAJES_MOTIVADORES[0]
+  const idx = sessionId.charCodeAt(0) % MENSAJES_MOTIVADORES.length
+  return MENSAJES_MOTIVADORES[idx]
+}
+
+function formatFechaVuelta(dateStr) {
+  if (!dateStr) return null
+  const date = new Date(dateStr + 'T12:00:00')
+  const today = new Date()
+  const tomorrow = new Date()
+  tomorrow.setDate(today.getDate() + 1)
+
+  const todayStr = today.toISOString().split('T')[0]
+  const tomorrowStr = tomorrow.toISOString().split('T')[0]
+
+  if (dateStr === todayStr) return 'hoy mismo'
+  if (dateStr === tomorrowStr) return 'mañana'
+
+  return date.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
+}
+
 function sm2(quality, repetitions, easiness, interval) {
   if (quality >= 3) {
     if (repetitions === 0) interval = 1
@@ -43,7 +83,7 @@ function buildQueue(questionsData, progressData, limite) {
     if (a._interval !== b._interval) return a._interval - b._interval
     return Math.random() - 0.5
   })
-  
+
   return limite ? scored.slice(0, limite) : scored
 }
 
@@ -72,6 +112,7 @@ function EstudiarInner({ params }) {
   const [reportSent, setReportSent] = useState(false)
   const [reportSending, setReportSending] = useState(false)
   const [sessionDoneIds, setSessionDoneIds] = useState(new Set())
+  const [nextReviewDate, setNextReviewDate] = useState(null)
 
   useEffect(() => {
     async function load() {
@@ -182,11 +223,25 @@ function EstudiarInner({ params }) {
     await supabase.rpc('update_streak', { p_user_id: userId })
   }
 
+  async function fetchNextReviewDate(questionIds) {
+    const { data } = await supabase
+      .from('user_question_progress')
+      .select('next_review_date')
+      .eq('user_id', userId)
+      .in('question_id', questionIds)
+      .order('next_review_date', { ascending: true })
+      .limit(1)
+    if (data && data.length > 0) {
+      setNextReviewDate(data[0].next_review_date)
+    }
+  }
+
   async function next() {
     if (current + 1 >= questions.length) {
       const newDoneIds = new Set([...sessionDoneIds, ...questions.map(q => q.id)])
       setSessionDoneIds(newDoneIds)
       await finishSession(session.correct, session.wrong, session.partial)
+      await fetchNextReviewDate(questions.map(q => q.id))
       setFinished(true)
     } else {
       setCurrent(prev => prev + 1)
@@ -230,6 +285,7 @@ function EstudiarInner({ params }) {
     setSession({ correct: 0, wrong: 0, partial: 0 })
     setFinished(false)
     setReportSent(false)
+    setNextReviewDate(null)
   }
 
   async function sendReport() {
@@ -278,56 +334,87 @@ function EstudiarInner({ params }) {
 
   if (finished) {
     const total = questions.length
-    const pct = Math.round((session.correct / total) * 100)
     const xp = session.correct * 10 + session.partial * 4
+    const mensaje = getMensaje(sessionId)
+    const fechaVuelta = formatFechaVuelta(nextReviewDate)
+
     return (
       <div style={{ minHeight: '100vh', background: 'white', fontFamily: 'Arial, sans-serif' }}>
         <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 24px', borderBottom: '1px solid #f0f0f0' }}>
           <a href="/dashboard" style={{ fontSize: '18px', fontWeight: '500', textDecoration: 'none', color: '#111' }}>
-          memo<span style={{ color: '#059669' }}>repe</span>
+            memo<span style={{ color: '#059669' }}>repe</span>
           </a>
         </nav>
-        <div style={{ maxWidth: '480px', margin: '0 auto', padding: '48px 24px', textAlign: 'center' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>{pct >= 80 ? '🎯' : pct >= 50 ? '📈' : '💪'}</div>
-          <h1 style={{ fontSize: '22px', fontWeight: '500', color: '#111', marginBottom: '4px' }}>{modoNombre} completado</h1>
-          <p style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '28px' }}>{quiz?.title} · {total} preguntas</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '16px' }}>
-            <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '14px' }}>
-              <div style={{ fontSize: '24px', fontWeight: '500', color: '#059669' }}>{session.correct}</div>
-              <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>Correctas</div>
-            </div>
-            <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '14px' }}>
-              <div style={{ fontSize: '24px', fontWeight: '500', color: '#ef4444' }}>{session.wrong}</div>
-              <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>Incorrectas</div>
-            </div>
-            <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '14px' }}>
-              <div style={{ fontSize: '24px', fontWeight: '500', color: '#d97706' }}>{session.partial}</div>
-              <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>Parciales</div>
-            </div>
+
+        <div style={{ maxWidth: '480px', margin: '0 auto', padding: '48px 24px' }}>
+
+          {/* Mensaje motivador */}
+          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+            <p style={{ fontSize: '15px', color: '#374151', lineHeight: '1.6', fontStyle: 'italic', margin: 0 }}>
+              "{mensaje}"
+            </p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '28px' }}>
-            <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '12px' }}>
-              <div style={{ fontSize: '18px', fontWeight: '500', color: '#111' }}>{pct}%</div>
-              <div style={{ fontSize: '11px', color: '#9ca3af' }}>Precision</div>
+
+          {/* Espacio AdSense */}
+          <div style={{ width: '100%', height: '90px', background: '#f9fafb', border: '1px dashed #e5e7eb', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '32px' }}>
+            <span style={{ fontSize: '11px', color: '#d1d5db', letterSpacing: '0.5px' }}>PUBLICIDAD</span>
+          </div>
+
+          {/* Estadísticas */}
+          <div style={{ marginBottom: '16px' }}>
+            <p style={{ fontSize: '13px', color: '#6b7280', textAlign: 'center', margin: '0 0 16px 0' }}>
+              {modoNombre} · {quiz?.title}
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '8px' }}>
+              <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
+                <div style={{ fontSize: '24px', fontWeight: '500', color: '#059669' }}>{session.correct}</div>
+                <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>Correctas</div>
+              </div>
+              <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
+                <div style={{ fontSize: '24px', fontWeight: '500', color: '#ef4444' }}>{session.wrong}</div>
+                <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>Incorrectas</div>
+              </div>
+              <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
+                <div style={{ fontSize: '24px', fontWeight: '500', color: '#d97706' }}>{session.partial}</div>
+                <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>Parciales</div>
+              </div>
             </div>
-            <div style={{ background: '#f0fdf4', borderRadius: '10px', padding: '12px' }}>
+            <div style={{ background: '#f0fdf4', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
               <div style={{ fontSize: '18px', fontWeight: '500', color: '#059669' }}>+{xp} XP</div>
-              <div style={{ fontSize: '11px', color: '#059669' }}>Ganados</div>
+              <div style={{ fontSize: '11px', color: '#059669' }}>ganados esta sesión</div>
+            </div>
+            <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '12px', textAlign: 'center', marginTop: '8px' }}>
+              <div style={{ fontSize: '18px', fontWeight: '500', color: '#111' }}>
+                {Math.round((session.correct / total) * 100)}%
+              </div>
+              <div style={{ fontSize: '11px', color: '#9ca3af' }}>precisión</div>
             </div>
           </div>
+
+          {/* Fecha de vuelta */}
+          {fechaVuelta && (
+            <div style={{ textAlign: 'center', marginBottom: '28px', padding: '14px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px' }}>
+              <p style={{ fontSize: '13px', color: '#92400e', margin: 0 }}>
+                Volvé <strong>{fechaVuelta}</strong> para consolidar lo aprendido.
+              </p>
+            </div>
+          )}
+
+          {/* Acciones */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {hasMas && limite && (
               <button onClick={continuar} style={{ padding: '12px', fontSize: '14px', fontWeight: '500', color: 'white', background: '#059669', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>
                 Continuar con otras {Math.min(limite, remaining.length)} preguntas
               </button>
             )}
-            <a href={'/estudiar/' + quizId + '/inicio'} style={{ display: 'block', padding: '12px', fontSize: '14px', color: '#374151', background: '#f3f4f6', borderRadius: '10px', textDecoration: 'none' }}>
+            <a href={'/estudiar/' + quizId + '/inicio'} style={{ display: 'block', padding: '12px', fontSize: '14px', color: '#374151', background: '#f3f4f6', borderRadius: '10px', textDecoration: 'none', textAlign: 'center' }}>
               Cambiar modo de estudio
             </a>
-            <a href="/dashboard" style={{ display: 'block', padding: '12px', fontSize: '14px', color: '#9ca3af', textDecoration: 'none' }}>
+            <a href="/dashboard" style={{ display: 'block', padding: '12px', fontSize: '14px', color: '#9ca3af', textDecoration: 'none', textAlign: 'center' }}>
               Ir al dashboard
             </a>
           </div>
+
         </div>
       </div>
     )
