@@ -1,6 +1,8 @@
 import { MetadataRoute } from 'next'
 import { createClient } from '@/lib/supabase'
 
+export const revalidate = 3600 // regenera cada hora
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = createClient()
 

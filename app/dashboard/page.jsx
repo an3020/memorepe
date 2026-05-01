@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import QuizProgressCard from '@/app/components/QuizProgressCard'
 import FeedbackButton from '@/app/components/FeedbackButton'
+import AnnouncementBanner from '@/app/components/AnnouncementBanner'
 
 export default async function Dashboard() {
   const cookieStore = await cookies()
@@ -115,6 +116,7 @@ export default async function Dashboard() {
     <div style={{ minHeight: '100vh', background: 'white', fontFamily: 'Arial, sans-serif' }}>
 
       <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 24px', borderBottom: '1px solid #f0f0f0' }}>
+        <AnnouncementBanner />
         <div style={{ fontSize: '18px', fontWeight: '500', letterSpacing: '-0.5px' }}>
           memo<span style={{ color: '#059669' }}>repe</span>
         </div>
