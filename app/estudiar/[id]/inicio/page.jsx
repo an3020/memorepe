@@ -48,6 +48,23 @@ export default async function EstudiarInicio({ params }) {
 
   const total = quiz.question_count || 0
 
+  // Calcular preguntas no vistas
+  const { data: questions } = await supabase
+    .from('questions')
+    .select('id')
+    .eq('quiz_id', id)
+
+  const questionIds = questions?.map(q => q.id) || []
+
+  const { data: progressData } = await supabase
+    .from('user_question_progress')
+    .select('question_id')
+    .eq('user_id', user.id)
+    .in('question_id', questionIds)
+
+  const seenIds = new Set(progressData?.map(p => p.question_id) || [])
+  const unseenCount = questionIds.filter(qid => !seenIds.has(qid)).length
+
   const modos = [
     {
       key: '10',
@@ -139,6 +156,22 @@ export default async function EstudiarInicio({ params }) {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+
+          {unseenCount > 0 && (
+            <a
+              href={'/estudiar/' + id + '?n=new'}
+              style={{ textDecoration: 'none', display: 'block', border: '2px solid #059669', borderRadius: '12px', padding: '16px 20px', background: '#f0fdf4', cursor: 'pointer' }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <span style={{ fontSize: '14px', fontWeight: '500', color: '#065f46' }}>Solo preguntas nuevas</span>
+                <span style={{ fontSize: '13px', fontWeight: '500', color: '#065f46' }}>{unseenCount} sin ver</span>
+              </div>
+              <p style={{ fontSize: '12px', color: '#065f46', opacity: 0.8, lineHeight: '1.5', margin: 0 }}>
+                Aprendé primero lo que nunca viste, sin mezclar con el repaso.
+              </p>
+            </a>
+          )}
+
           {modos.map(modo => (
             <a
               key={modo.key}

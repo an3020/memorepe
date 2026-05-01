@@ -120,7 +120,7 @@ function EstudiarInner({ params }) {
       setQuizId(id)
 
       const nParam = searchParams.get('n')
-      const limite = nParam && nParam !== 'all' ? parseInt(nParam) : null
+      const limite = nParam && nParam !== 'all' && nParam !== 'new' ? parseInt(nParam) : null
       setModoN(nParam)
 
       const { data: { user } } = await supabase.auth.getUser()
@@ -142,7 +142,16 @@ function EstudiarInner({ params }) {
         .in('question_id', questionIds)
 
       setQuestionsData(qData || [])
-      const queue = buildQueue(qData || [], progressData || [], limite)
+
+      let queue
+      if (nParam === 'new') {
+        const seenIds = new Set(progressData?.map(p => p.question_id) || [])
+        const unseenQuestions = (qData || []).filter(q => !seenIds.has(q.id))
+        queue = buildQueue(unseenQuestions, [], null)
+      } else {
+        queue = buildQueue(qData || [], progressData || [], limite)
+      }
+
       setQuestions(queue)
 
       const { data: sess } = await supabase
@@ -257,7 +266,7 @@ function EstudiarInner({ params }) {
   }
 
   async function continuar() {
-    const limite = modoN && modoN !== 'all' ? parseInt(modoN) : null
+    const limite = modoN && modoN !== 'all' && modoN !== 'new' ? parseInt(modoN) : null
 
     const questionIds = questionsData.map(q => q.id)
     const { data: progressData } = await supabase
@@ -325,12 +334,12 @@ function EstudiarInner({ params }) {
   if (loading) return <LoadingScreen />
   if (questions.length === 0) return <div style={{ padding: '40px', fontFamily: 'Arial', textAlign: 'center', color: '#9ca3af' }}>Este quiz no tiene preguntas todavía.</div>
 
-  const modoNombres = { '10': 'Calentamiento', '30': 'Sesion express', '50': 'Sesion completa', '100': 'Maraton', 'all': 'Repaso total' }
+  const modoNombres = { 'new': 'Solo nuevas', '10': 'Calentamiento', '30': 'Sesion express', '50': 'Sesion completa', '100': 'Maraton', 'all': 'Repaso total' }
   const modoNombre = modoNombres[modoN] || 'Sesion'
-  const limite = modoN && modoN !== 'all' ? parseInt(modoN) : null
+  const limite = modoN && modoN !== 'all' && modoN !== 'new' ? parseInt(modoN) : null
   const allDoneIds = finished ? new Set([...sessionDoneIds, ...questions.map(q => q.id)]) : new Set()
   const remaining = questionsData.filter(q => !allDoneIds.has(q.id))
-  const hasMas = remaining.length > 0
+  const hasMas = remaining.length > 0 && modoN !== 'new'
 
   if (finished) {
     const total = questions.length
@@ -348,19 +357,16 @@ function EstudiarInner({ params }) {
 
         <div style={{ maxWidth: '480px', margin: '0 auto', padding: '48px 24px' }}>
 
-          {/* Mensaje motivador */}
           <div style={{ textAlign: 'center', marginBottom: '32px' }}>
             <p style={{ fontSize: '15px', color: '#374151', lineHeight: '1.6', fontStyle: 'italic', margin: 0 }}>
               "{mensaje}"
             </p>
           </div>
 
-          {/* Espacio AdSense */}
           <div style={{ width: '100%', height: '90px', background: '#f9fafb', border: '1px dashed #e5e7eb', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '32px' }}>
             <span style={{ fontSize: '11px', color: '#d1d5db', letterSpacing: '0.5px' }}>PUBLICIDAD</span>
           </div>
 
-          {/* Estadísticas */}
           <div style={{ marginBottom: '16px' }}>
             <p style={{ fontSize: '13px', color: '#6b7280', textAlign: 'center', margin: '0 0 16px 0' }}>
               {modoNombre} · {quiz?.title}
@@ -379,19 +385,18 @@ function EstudiarInner({ params }) {
                 <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>Parciales</div>
               </div>
             </div>
-            <div style={{ background: '#f0fdf4', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
-              <div style={{ fontSize: '18px', fontWeight: '500', color: '#059669' }}>+{xp} XP</div>
-              <div style={{ fontSize: '11px', color: '#059669' }}>ganados esta sesión</div>
-            </div>
-            <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '12px', textAlign: 'center', marginTop: '8px' }}>
-              <div style={{ fontSize: '18px', fontWeight: '500', color: '#111' }}>
-                {Math.round((session.correct / total) * 100)}%
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
+                <div style={{ fontSize: '18px', fontWeight: '500', color: '#111' }}>{Math.round((session.correct / total) * 100)}%</div>
+                <div style={{ fontSize: '11px', color: '#9ca3af' }}>precisión</div>
               </div>
-              <div style={{ fontSize: '11px', color: '#9ca3af' }}>precisión</div>
+              <div style={{ background: '#f0fdf4', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
+                <div style={{ fontSize: '18px', fontWeight: '500', color: '#059669' }}>+{xp} XP</div>
+                <div style={{ fontSize: '11px', color: '#059669' }}>ganados esta sesión</div>
+              </div>
             </div>
           </div>
 
-          {/* Fecha de vuelta */}
           {fechaVuelta && (
             <div style={{ textAlign: 'center', marginBottom: '28px', padding: '14px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px' }}>
               <p style={{ fontSize: '13px', color: '#92400e', margin: 0 }}>
@@ -400,7 +405,6 @@ function EstudiarInner({ params }) {
             </div>
           )}
 
-          {/* Acciones */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {hasMas && limite && (
               <button onClick={continuar} style={{ padding: '12px', fontSize: '14px', fontWeight: '500', color: 'white', background: '#059669', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>
