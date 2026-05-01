@@ -5,6 +5,8 @@ import QuizProgressCard from '@/app/components/QuizProgressCard'
 import FeedbackButton from '@/app/components/FeedbackButton'
 import AnnouncementBanner from '@/app/components/AnnouncementBanner'
 
+export const revalidate = 0
+
 export default async function Dashboard() {
   const cookieStore = await cookies()
 

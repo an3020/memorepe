@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import FavoriteButton from './FavoriteButton'
 import ShareButton from './ShareButton'
+import ResetProgressButton from '@/app/components/ResetProgressButton'
 
 export default async function EstudiarInicio({ params }) {
   const { id } = await params
@@ -152,6 +153,8 @@ export default async function EstudiarInicio({ params }) {
             </a>
           ))}
         </div>
+
+        <ResetProgressButton quizId={id} userId={user.id} />
 
       </div>
     </div>
