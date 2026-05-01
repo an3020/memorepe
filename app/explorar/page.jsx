@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import FeedbackButton from '@/app/components/FeedbackButton'
+import BuscadorExplorar from '@/app/components/BuscadorExplorar'
 
 export default async function Explorar({ searchParams }) {
   const cookieStore = await cookies()
@@ -26,20 +27,50 @@ export default async function Explorar({ searchParams }) {
   const params = await searchParams
   const categoria = params?.categoria || ''
   const busqueda = params?.q || ''
+  const esBusquedaAutor = busqueda.startsWith('@')
 
-  let query = supabase
-    .from('quizzes')
-    .select('*, users(username)')
-    .eq('visibility', 'public')
-    .order('student_count', { ascending: false })
+  let quizzes = []
+  let autorEncontrado = null
 
-  if (categoria) query = query.eq('category', categoria)
-  if (busqueda) query = query.or('title.ilike.%' + busqueda + '%,subject.ilike.%' + busqueda + '%')
+  if (esBusquedaAutor) {
+    // Buscar por username
+    const username = busqueda.slice(1).toLowerCase()
+    const { data: usuarioData } = await supabase
+      .from('users')
+      .select('id, username')
+      .ilike('username', username)
+      .single()
 
-  const { data: quizzes } = await query
+    if (usuarioData) {
+      autorEncontrado = usuarioData
+      let query = supabase
+        .from('quizzes')
+        .select('*, users(username)')
+        .eq('visibility', 'public')
+        .eq('user_id', usuarioData.id)
+        .order('student_count', { ascending: false })
+
+      if (categoria) query = query.eq('category', categoria)
+      const { data } = await query
+      quizzes = data || []
+    }
+  } else {
+    // Búsqueda normal
+    let query = supabase
+      .from('quizzes')
+      .select('*, users(username)')
+      .eq('visibility', 'public')
+      .order('student_count', { ascending: false })
+
+    if (categoria) query = query.eq('category', categoria)
+    if (busqueda) query = query.or('title.ilike.%' + busqueda + '%,subject.ilike.%' + busqueda + '%')
+
+    const { data } = await query
+    quizzes = data || []
+  }
 
   let progressMap = {}
-  if (user && quizzes && quizzes.length > 0) {
+  if (user && quizzes.length > 0) {
     const quizIds = quizzes.map(q => q.id)
     const { data: progressData } = await supabase
       .rpc('get_user_quizzes_progress', { p_user_id: user.id, p_quiz_ids: quizIds })
@@ -105,27 +136,9 @@ export default async function Explorar({ searchParams }) {
 
       <div style={{ maxWidth: '720px', margin: '0 auto', padding: '32px 24px' }}>
         <h1 style={{ fontSize: '20px', fontWeight: '500', color: '#111', marginBottom: '6px' }}>Explorar quizzes</h1>
-        <p style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '20px' }}>{quizzes?.length || 0} quizzes publicos disponibles</p>
+        <p style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '20px' }}>{quizzes.length} quizzes publicos disponibles</p>
 
-        <form method="GET" action="/explorar" style={{ marginBottom: '16px' }}>
-          <input type="hidden" name="categoria" value={categoria} />
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <input
-              name="q"
-              defaultValue={busqueda}
-              placeholder="Buscar por titulo, materia, facultad..."
-              style={{ flex: 1, padding: '9px 14px', fontSize: '13px', border: '1px solid #e5e7eb', borderRadius: '8px', background: 'white', color: '#111', fontFamily: 'Arial, sans-serif' }}
-            />
-            <button type="submit" style={{ padding: '9px 18px', fontSize: '13px', fontWeight: '500', color: 'white', background: '#059669', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
-              Buscar
-            </button>
-            {busqueda && (
-              <a href={buildUrl(categoria, '')} style={{ padding: '9px 14px', fontSize: '13px', color: '#6b7280', background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', textDecoration: 'none' }}>
-                Limpiar
-              </a>
-            )}
-          </div>
-        </form>
+        <BuscadorExplorar defaultValue={busqueda} categoria={categoria} />
 
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '24px' }}>
           {categorias.map(cat => {
@@ -138,13 +151,27 @@ export default async function Explorar({ searchParams }) {
           })}
         </div>
 
-        {busqueda && (
+        {esBusquedaAutor && (
+          <div style={{ marginBottom: '16px' }}>
+            {autorEncontrado ? (
+              <p style={{ fontSize: '13px', color: '#6b7280' }}>
+                Quizzes de <strong style={{ color: '#059669' }}>@{autorEncontrado.username}</strong> · {quizzes.length} resultado{quizzes.length !== 1 ? 's' : ''}
+              </p>
+            ) : (
+              <p style={{ fontSize: '13px', color: '#6b7280' }}>
+                No encontramos el usuario <strong>{busqueda}</strong>
+              </p>
+            )}
+          </div>
+        )}
+
+        {!esBusquedaAutor && busqueda && (
           <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '16px' }}>
             Resultados para <strong>{busqueda}</strong>
           </p>
         )}
 
-        {quizzes && quizzes.length > 0 ? (
+        {quizzes.length > 0 ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '12px' }}>
             {quizzes.map(quiz => {
               const catStyle = catColors[quiz.category] || catColors.otro
