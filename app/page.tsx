@@ -1,7 +1,6 @@
-import type { FC } from 'react'
 import LoginButton from './components/LoginButton'
 import FeedbackButton from '@/app/components/FeedbackButton'
-
+import HeroRotativo from '@/app/components/HeroRotativo'
 
 export default function Home() {
   return (
@@ -12,57 +11,71 @@ export default function Home() {
           memo<span style={{ color: '#059669' }}>repe</span>
         </div>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <a href="/explorar" style={{ fontSize: '13px', color: '#9ca3af', textDecoration: 'none', cursor: 'pointer' }}>Explorar</a>
+          <a href="/explorar" style={{ fontSize: '13px', color: '#9ca3af', textDecoration: 'none' }}>Explorar</a>
           <LoginButton />
         </div>
       </nav>
 
-      <section style={{ maxWidth: '640px', margin: '0 auto', padding: '80px 24px', textAlign: 'center' }}>
-        <h1 style={{ fontSize: '48px', fontWeight: '500', letterSpacing: '-1px', color: '#111', lineHeight: '1.15', marginBottom: '16px' }}>
-          Estudia menos.<br />
-          <span style={{ color: '#059669' }}>Aprende mas.</span>
-        </h1>
-        <p style={{ fontSize: '17px', color: '#6b7280', marginBottom: '40px', lineHeight: '1.6' }}>
-          Memorepe usa repeticion espaciada para mostrarte exactamente lo que necesitas repasar, justo cuando lo necesitas.
-        </p>
-        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <LoginButton label="Empezar gratis con Google" primary />
-          <a href="/explorar" style={{ padding: '10px 20px', fontSize: '14px', color: '#6b7280', border: '1px solid #e5e7eb', borderRadius: '8px', textDecoration: 'none' }}>
-            Explorar quizzes
-          </a>
+      {/* Hero con rotación en cliente */}
+      <HeroRotativo />
+
+      {/* 3 cajas */}
+      <section style={{ maxWidth: '720px', margin: '0 auto', padding: '0 24px 64px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
+          {[
+            {
+              icon: '🧠',
+              titulo: 'El algoritmo trabaja por ti',
+              desc: 'Cada vez que estudias, el sistema aprende cómo aprendes y ajusta qué repasar al día siguiente.',
+            },
+            {
+              icon: '📅',
+              titulo: 'Planifica tu examen',
+              desc: 'Carga tu fecha de examen y Memorepe te dice cuánto estudiar cada día para llegar preparado.',
+            },
+            {
+              icon: '📚',
+              titulo: 'Bancos de preguntas universitarios',
+              desc: 'Miles de preguntas de opción múltiple creadas por estudiantes de medicina, derecho, economía y más.',
+            },
+          ].map(f => (
+            <div key={f.titulo} style={{ border: '1px solid #f0f0f0', borderRadius: '12px', padding: '20px' }}>
+              <div style={{ fontSize: '24px', marginBottom: '10px' }}>{f.icon}</div>
+              <h3 style={{ fontSize: '14px', fontWeight: '500', color: '#111', marginBottom: '6px' }}>{f.titulo}</h3>
+              <p style={{ fontSize: '12px', color: '#9ca3af', lineHeight: '1.6', margin: 0 }}>{f.desc}</p>
+            </div>
+          ))}
         </div>
       </section>
 
-      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', margin: '0 24px 64px', border: '1px solid #f0f0f0', borderRadius: '12px', overflow: 'hidden' }}>
-        <div style={{ padding: '24px', textAlign: 'center', borderRight: '1px solid #f0f0f0' }}>
-          <div style={{ fontSize: '24px', fontWeight: '500', color: '#111' }}>1.247</div>
-          <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>Quizzes publicos</div>
-        </div>
-        <div style={{ padding: '24px', textAlign: 'center', borderRight: '1px solid #f0f0f0' }}>
-          <div style={{ fontSize: '24px', fontWeight: '500', color: '#111' }}>3.891</div>
-          <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>Estudiantes</div>
-        </div>
-        <div style={{ padding: '24px', textAlign: 'center' }}>
-          <div style={{ fontSize: '24px', fontWeight: '500', color: '#111' }}>84.329</div>
-          <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>Preguntas respondidas</div>
-        </div>
-      </section>
-
+      {/* Por qué Memorepe */}
       <section style={{ maxWidth: '640px', margin: '0 auto', padding: '0 24px 80px' }}>
-        <p style={{ fontSize: '11px', fontWeight: '500', color: '#059669', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>Por que Memorepe</p>
+        <p style={{ fontSize: '11px', fontWeight: '500', color: '#059669', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>Por qué Memorepe</p>
         <h2 style={{ fontSize: '24px', fontWeight: '500', color: '#111', marginBottom: '8px' }}>No es un testeador. Es un sistema de aprendizaje.</h2>
-        <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '32px' }}>La diferencia esta en que pasa despues de que respondes.</p>
+        <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '32px' }}>La diferencia está en qué pasa después de que respondes.</p>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           {[
-            { titulo: 'Repeticion espaciada', desc: 'El algoritmo decide que repasar hoy segun tu historial personal.' },
-            { titulo: 'Tu progreso real', desc: 'Sabes exactamente que dominas y que necesitas reforzar.' },
-            { titulo: 'Comunidad', desc: 'Miles de quizzes creados por estudiantes como vos.' },
-            { titulo: 'Logros y rachas', desc: 'XP, niveles y logros que reflejan tu aprendizaje real.' },
+            {
+              titulo: 'Un algoritmo moderno y eficiente',
+              desc: 'No es azar ni orden fijo. El sistema decide qué estudiar hoy basándose en tu historial personal de respuestas.',
+            },
+            {
+              titulo: 'Conoce tu progreso real',
+              desc: 'Cada pregunta tiene un estado: vista, en progreso, dominada o experta. Siempre sabes dónde estás parado.',
+            },
+            {
+              titulo: 'Planifica tu examen',
+              desc: 'Ingresa la fecha de tu parcial y el sistema calcula cuánto estudiar por día para llegar sin sorpresas.',
+            },
+            {
+              titulo: 'Banco de preguntas de la comunidad',
+              desc: 'Accede a preguntas de opción múltiple creadas por estudiantes universitarios de toda la región.',
+            },
           ].map(f => (
             <div key={f.titulo} style={{ border: '1px solid #f0f0f0', borderRadius: '12px', padding: '20px' }}>
               <div style={{ width: '32px', height: '32px', background: '#f0fdf4', borderRadius: '8px', marginBottom: '12px' }} />
               <h3 style={{ fontSize: '14px', fontWeight: '500', color: '#111', marginBottom: '4px' }}>{f.titulo}</h3>
-              <p style={{ fontSize: '12px', color: '#9ca3af', lineHeight: '1.5' }}>{f.desc}</p>
+              <p style={{ fontSize: '12px', color: '#9ca3af', lineHeight: '1.5', margin: 0 }}>{f.desc}</p>
             </div>
           ))}
         </div>
@@ -79,7 +92,7 @@ export default function Home() {
         </div>
       </footer>
 
-      
+      <FeedbackButton />
     </div>
   )
 }
