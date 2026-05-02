@@ -101,6 +101,25 @@ export default function GestionarQuiz({ params }) {
     setEditingQuestion(updated)
   }
 
+  function addOption() {
+    if (editingQuestion.options.length >= 5) return
+    setEditingQuestion({
+      ...editingQuestion,
+      options: [...editingQuestion.options, { id: 'new-' + Date.now(), body: '', is_correct: false, isNew: true }]
+    })
+  }
+
+  function removeOption(oIndex) {
+    if (editingQuestion.options.length <= 2) return
+    const updated = { ...editingQuestion }
+    updated.options = updated.options.filter((_, i) => i !== oIndex)
+    // Si era la única correcta en tipo single, marcar la primera como correcta
+    if (updated.type === 'single' && !updated.options.some(o => o.is_correct)) {
+      updated.options[0].is_correct = true
+    }
+    setEditingQuestion(updated)
+  }
+
   async function saveQuestion() {
     setSavingQuestion(true)
     const q = editingQuestion
@@ -110,14 +129,37 @@ export default function GestionarQuiz({ params }) {
       .eq('id', q.id)
 
     for (const opt of q.options) {
-      await supabase.from('options')
-        .update({ body: opt.body, is_correct: opt.is_correct })
-        .eq('id', opt.id)
+      if (opt.isNew) {
+        // Insertar opción nueva
+        await supabase.from('options').insert({
+          question_id: q.id,
+          body: opt.body,
+          is_correct: opt.is_correct,
+          order: q.options.indexOf(opt),
+        })
+      } else {
+        await supabase.from('options')
+          .update({ body: opt.body, is_correct: opt.is_correct })
+          .eq('id', opt.id)
+      }
     }
+
+    // Borrar opciones eliminadas (las que estaban antes y ya no están)
+    const originalQuestion = questions.find(qq => qq.id === q.id)
+    const originalIds = originalQuestion?.options.map(o => o.id) || []
+    const currentIds = q.options.filter(o => !o.isNew).map(o => o.id)
+    const deletedIds = originalIds.filter(id => !currentIds.includes(id))
+    for (const deletedId of deletedIds) {
+      await supabase.from('options').delete().eq('id', deletedId)
+    }
+
+    // Recargar la pregunta actualizada
+    const { data: updatedOptions } = await supabase
+      .from('options').select('*').eq('question_id', q.id).order('order')
 
     setQuestions(questions.map(question =>
       question.id === q.id
-        ? { ...question, body: q.body, type: q.type, explanation: q.explanation, options: q.options }
+        ? { ...question, body: q.body, type: q.type, explanation: q.explanation, options: updatedOptions || q.options }
         : question
     ))
 
@@ -458,14 +500,27 @@ export default function GestionarQuiz({ params }) {
                         </button>
                       ))}
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' }}>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '8px' }}>
                       {editingQuestion.options.map((opt, oIndex) => (
                         <div key={opt.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <div onClick={() => updateEditOption(oIndex, 'is_correct', !opt.is_correct)} style={{ width: '18px', height: '18px', borderRadius: editingQuestion.type === 'single' ? '50%' : '4px', border: '2px solid', borderColor: opt.is_correct ? '#059669' : '#d1d5db', background: opt.is_correct ? '#059669' : 'white', cursor: 'pointer', flexShrink: 0 }} />
                           <input style={{ ...input }} value={opt.body} onChange={e => updateEditOption(oIndex, 'body', e.target.value)} />
+                          {editingQuestion.options.length > 2 && (
+                            <button onClick={() => removeOption(oIndex)} style={{ background: 'none', border: 'none', color: '#d1d5db', fontSize: '16px', cursor: 'pointer', flexShrink: 0, lineHeight: 1, padding: '0 2px' }} title="Eliminar opción">
+                              ×
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
+
+                    {editingQuestion.options.length < 5 && (
+                      <button onClick={addOption} style={{ fontSize: '12px', color: '#059669', background: 'none', border: '1px dashed #6ee7b7', borderRadius: '8px', padding: '6px 14px', cursor: 'pointer', marginBottom: '10px', width: '100%' }}>
+                        + Agregar opción
+                      </button>
+                    )}
+
                     <div style={{ marginBottom: '12px' }}>
                       <label style={{ fontSize: '11px', color: '#9ca3af', display: 'block', marginBottom: '4px' }}>Explicacion didactica (opcional)</label>
                       <textarea style={{ ...input, minHeight: '48px', resize: 'vertical', background: '#f9fafb' }} value={editingQuestion.explanation} onChange={e => setEditingQuestion({ ...editingQuestion, explanation: e.target.value })} placeholder="Explica por que es correcta esta respuesta..." />
