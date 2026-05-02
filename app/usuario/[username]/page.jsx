@@ -24,7 +24,7 @@ export default async function UsuarioPage({ params, searchParams }) {
 
   const { data: autor } = await supabase
     .from('users')
-    .select('id, username, full_name, created_at')
+    .select('id, username, bio, created_at')
     .eq('username', username)
     .single()
 
@@ -60,6 +60,8 @@ export default async function UsuarioPage({ params, searchParams }) {
     .select('id', { count: 'exact' })
     .eq('user_id', autor.id)
     .eq('visibility', 'public')
+
+  const avatarLetras = autor.username.slice(0, 2).toUpperCase()
 
   const categorias = [
     { value: '', label: 'Todo' },
@@ -103,8 +105,6 @@ export default async function UsuarioPage({ params, searchParams }) {
     return date.toLocaleDateString('es-AR')
   }
 
-  const avatarLetras = (autor.full_name || autor.username).slice(0, 2).toUpperCase()
-
   return (
     <div style={{ minHeight: '100vh', background: 'white', fontFamily: 'Arial, sans-serif' }}>
       <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 24px', borderBottom: '1px solid #f0f0f0' }}>
@@ -120,17 +120,17 @@ export default async function UsuarioPage({ params, searchParams }) {
 
       <div style={{ maxWidth: '720px', margin: '0 auto', padding: '32px 24px' }}>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px', paddingBottom: '28px', borderBottom: '1px solid #f0f0f0' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '32px', paddingBottom: '28px', borderBottom: '1px solid #f0f0f0' }}>
           <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#d1fae5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: '500', color: '#065f46', flexShrink: 0 }}>
             {avatarLetras}
           </div>
           <div>
-            <div style={{ fontSize: '18px', fontWeight: '500', color: '#111', marginBottom: '2px' }}>
-              {autor.full_name || autor.username}
-            </div>
-            <div style={{ fontSize: '13px', color: '#059669', marginBottom: '6px' }}>@{autor.username}</div>
+            <div style={{ fontSize: '18px', fontWeight: '500', color: '#059669', marginBottom: '4px' }}>@{autor.username}</div>
+            {autor.bio && (
+              <p style={{ fontSize: '13px', color: '#374151', margin: '0 0 8px 0', lineHeight: '1.5' }}>{autor.bio}</p>
+            )}
             <div style={{ display: 'flex', gap: '16px' }}>
-              <span style={{ fontSize: '12px', color: '#9ca3af' }}>{totalQuizzes?.length || 0} quizzes publicos</span>
+              <span style={{ fontSize: '12px', color: '#9ca3af' }}>{totalQuizzes?.length || 0} quizzes públicos</span>
               <span style={{ fontSize: '12px', color: '#9ca3af' }}>Miembro desde {new Date(autor.created_at).toLocaleDateString('es-AR')}</span>
             </div>
           </div>
@@ -145,17 +145,11 @@ export default async function UsuarioPage({ params, searchParams }) {
               placeholder="Buscar en los quizzes de este autor..."
               style={{ flex: 1, padding: '9px 14px', fontSize: '13px', border: '1px solid #e5e7eb', borderRadius: '8px', background: 'white', color: '#111', fontFamily: 'Arial, sans-serif' }}
             />
-            <button
-              type="submit"
-              style={{ padding: '9px 18px', fontSize: '13px', fontWeight: '500', color: 'white', background: '#059669', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
-            >
+            <button type="submit" style={{ padding: '9px 18px', fontSize: '13px', fontWeight: '500', color: 'white', background: '#059669', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
               Buscar
             </button>
             {busqueda && (
-              <a
-                href={buildUrl(categoria, '')}
-                style={{ padding: '9px 14px', fontSize: '13px', color: '#6b7280', background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', textDecoration: 'none' }}
-              >
+              <a href={buildUrl(categoria, '')} style={{ padding: '9px 14px', fontSize: '13px', color: '#6b7280', background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', textDecoration: 'none' }}>
                 Limpiar
               </a>
             )}
@@ -194,19 +188,24 @@ export default async function UsuarioPage({ params, searchParams }) {
                     {quiz.title}
                   </div>
                   {quiz.subject && (
-                    <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '8px' }}>
+                    <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '6px' }}>
                       {quiz.subject}{quiz.faculty ? ' · ' + quiz.faculty : ''}
+                    </div>
+                  )}
+                  {quiz.description && (
+                    <div style={{ fontSize: '12px', color: '#374151', marginBottom: '6px', lineHeight: '1.5' }}>
+                      {quiz.description}
+                    </div>
+                  )}
+                  {quiz.notes && (
+                    <div style={{ fontSize: '12px', color: '#6b7280', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '6px', padding: '8px 10px', marginBottom: '10px', lineHeight: '1.4' }}>
+                      {quiz.notes}
                     </div>
                   )}
                   <div style={{ display: 'flex', gap: '12px', marginBottom: '10px' }}>
                     <span style={{ fontSize: '12px', color: '#9ca3af' }}>{quiz.question_count} preguntas</span>
                     <span style={{ fontSize: '12px', color: '#9ca3af' }}>{quiz.student_count || 0} estudiantes</span>
                   </div>
-                  {quiz.notes && (
-                    <div style={{ fontSize: '12px', color: '#6b7280', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '6px', padding: '8px 10px', marginBottom: '10px', lineHeight: '1.4' }}>
-                      {quiz.notes}
-                    </div>
-                  )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f0f0f0', paddingTop: '10px' }}>
                     <span style={{ fontSize: '11px', color: '#9ca3af' }}>{timeAgo(quiz.updated_at || quiz.created_at)}</span>
                     <a href={'/estudiar/' + quiz.id + '/inicio'} style={{ fontSize: '12px', fontWeight: '500', color: '#065f46', background: '#d1fae5', border: '1px solid #6ee7b7', padding: '5px 12px', borderRadius: '6px', textDecoration: 'none' }}>
@@ -220,11 +219,9 @@ export default async function UsuarioPage({ params, searchParams }) {
         ) : (
           <div style={{ textAlign: 'center', padding: '60px 24px' }}>
             <p style={{ fontSize: '16px', fontWeight: '500', color: '#111', marginBottom: '8px' }}>
-              {busqueda ? 'No encontramos resultados' : 'Este usuario no tiene quizzes publicos todavia'}
+              {busqueda ? 'No encontramos resultados' : 'Este usuario no tiene quizzes públicos todavía'}
             </p>
-            <p style={{ fontSize: '13px', color: '#9ca3af' }}>
-              {busqueda ? 'Proba con otro termino.' : ''}
-            </p>
+            {busqueda && <p style={{ fontSize: '13px', color: '#9ca3af' }}>Proba con otro termino.</p>}
           </div>
         )}
 
