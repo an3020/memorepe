@@ -70,6 +70,8 @@ export default async function Dashboard({ searchParams }) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/')
 
+  await supabase.rpc('apply_xp_decay', { p_user_id: user.id })
+
   const { data: userProfile } = await supabase
     .from('users')
     .select('username, streak_current, streak_best, last_study_date, xp_total, xp_decay_pending')
