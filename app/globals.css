@@ -3,3 +3,42 @@ body {
   padding: 0;
   font-family: Arial, sans-serif;
 }
+
+.blog-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+  margin: 24px 0;
+}
+
+.blog-content h2 {
+  font-size: 20px;
+  font-weight: 500;
+  color: #111;
+  margin: 32px 0 12px;
+}
+
+.blog-content h3 {
+  font-size: 17px;
+  font-weight: 500;
+  color: #111;
+  margin: 24px 0 10px;
+}
+
+.blog-content p {
+  margin: 0 0 16px;
+}
+
+.blog-content strong {
+  font-weight: 600;
+  color: #111;
+}
+
+.blog-content ul, .blog-content ol {
+  padding-left: 20px;
+  margin: 0 0 16px;
+}
+
+.blog-content li {
+  margin-bottom: 6px;
+}
