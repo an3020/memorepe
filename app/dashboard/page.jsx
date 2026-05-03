@@ -5,6 +5,9 @@ import QuizProgressCard from '@/app/components/QuizProgressCard'
 import FeedbackButton from '@/app/components/FeedbackButton'
 import AnnouncementBanner from '@/app/components/AnnouncementBanner'
 import DashboardBuscador from '@/app/components/DashboardBuscador'
+import fs from 'fs'
+import path from 'path'
+import matter from 'gray-matter'
 
 export const revalidate = 0
 
@@ -198,13 +201,25 @@ export default async function Dashboard({ searchParams }) {
   }
 
   const quizzesConProgreso = (quizzes || []).map(quiz => ({ ...quiz, progreso: progressMap[quiz.id] }))
+// Artículos del blog
+  const postsDir = path.join(process.cwd(), 'app/blog/posts')
+  const articulos = fs.existsSync(postsDir)
+    ? fs.readdirSync(postsDir)
+      .filter(f => f.endsWith('.md'))
+      .map(file => {
+        const { data } = matter(fs.readFileSync(path.join(postsDir, file), 'utf8'))
+        return { slug: data.slug || file.replace('.md', ''), title: data.title || '', date: data.date || '', image: data.image || null }
+      })
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .slice(0, 4)
+    : []
 
-  const seccion = {
-    background: '#f9fafb',
-    borderRadius: '12px',
-    padding: '16px',
-    marginBottom: '12px',
-  }
+    const seccion = {
+      background: '#f9fafb',
+      borderRadius: '12px',
+      padding: '16px',
+      marginBottom: '12px',
+    }
 
   const seccionTitulo = {
     fontSize: '17px',
@@ -406,6 +421,31 @@ export default async function Dashboard({ searchParams }) {
                     Estudiar
                   </a>
                 </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Blog */}
+        {articulos.length > 0 && (
+          <div style={seccion}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <span style={seccionTitulo}>Del blog</span>
+              <a href="/blog" style={{ fontSize: '12px', color: '#059669', textDecoration: 'none' }}>Ver todos →</a>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '10px' }}>
+              {articulos.map(art => (
+                <a key={art.slug} href={'/blog/' + art.slug} style={{ textDecoration: 'none', display: 'block', background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', overflow: 'hidden' }}>
+                  {art.image ? (
+                    <img src={art.image} alt={art.title} style={{ width: '100%', height: '100px', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ width: '100%', height: '100px', background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px' }}>📚</div>
+                  )}
+                  <div style={{ padding: '12px' }}>
+                    <p style={{ fontSize: '12px', color: '#9ca3af', margin: '0 0 4px' }}>{new Date(art.date + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'long' })}</p>
+                    <p style={{ fontSize: '13px', fontWeight: '500', color: '#111', margin: 0, lineHeight: '1.4' }}>{art.title}</p>
+                  </div>
+                </a>
               ))}
             </div>
           </div>

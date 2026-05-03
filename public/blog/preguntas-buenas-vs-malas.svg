@@ -1,0 +1,41 @@
+<svg width="680" height="340" viewBox="0 0 680 340" xmlns="http://www.w3.org/2000/svg">
+  <rect width="680" height="340" fill="white"/>
+  <text font-family="Arial" font-size="16" font-weight="500" fill="#111" x="340" y="30" text-anchor="middle">Qué hace buena a una pregunta de práctica</text>
+
+  <!-- Mala: muy vaga -->
+  <rect x="30" y="60" width="190" height="200" rx="10" fill="#fef2f2" stroke="#fecaca" stroke-width="1"/>
+  <text font-family="Arial" font-size="12" font-weight="500" fill="#b91c1c" x="125" y="85" text-anchor="middle">✗ Demasiado vaga</text>
+  <rect x="50" y="100" width="150" height="60" rx="8" fill="white" stroke="#fecaca" stroke-width="0.5"/>
+  <text font-family="Arial" font-size="11" fill="#6b7280" x="125" y="124" text-anchor="middle">¿Qué es el</text>
+  <text font-family="Arial" font-size="11" fill="#6b7280" x="125" y="142" text-anchor="middle">derecho?</text>
+  <text font-family="Arial" font-size="11" fill="#ef4444" x="125" y="185" text-anchor="middle">Respuesta imposible</text>
+  <text font-family="Arial" font-size="11" fill="#ef4444" x="125" y="202" text-anchor="middle">de evaluar</text>
+  <text font-family="Arial" font-size="11" fill="#ef4444" x="125" y="219" text-anchor="middle">No genera aprendizaje</text>
+  <text font-family="Arial" font-size="11" fill="#ef4444" x="125" y="236" text-anchor="middle">real</text>
+
+  <!-- Regular: muy específica -->
+  <rect x="245" y="60" width="190" height="200" rx="10" fill="#fffbeb" stroke="#fde68a" stroke-width="1"/>
+  <text font-family="Arial" font-size="12" font-weight="500" fill="#92400e" x="340" y="85" text-anchor="middle">~ Muy específica</text>
+  <rect x="265" y="100" width="150" height="60" rx="8" fill="white" stroke="#fde68a" stroke-width="0.5"/>
+  <text font-family="Arial" font-size="10" fill="#6b7280" x="340" y="120" text-anchor="middle">¿En qué página del</text>
+  <text font-family="Arial" font-size="10" fill="#6b7280" x="340" y="136" text-anchor="middle">código civil aparece</text>
+  <text font-family="Arial" font-size="10" fill="#6b7280" x="340" y="152" text-anchor="middle">el art. 14 bis?</text>
+  <text font-family="Arial" font-size="11" fill="#d97706" x="340" y="185" text-anchor="middle">Detalle irrelevante</text>
+  <text font-family="Arial" font-size="11" fill="#d97706" x="340" y="202" text-anchor="middle">para el examen</text>
+  <text font-family="Arial" font-size="11" fill="#d97706" x="340" y="219" text-anchor="middle">Bajo valor de</text>
+  <text font-family="Arial" font-size="11" fill="#d97706" x="340" y="236" text-anchor="middle">aprendizaje</text>
+
+  <!-- Buena -->
+  <rect x="460" y="60" width="190" height="200" rx="10" fill="#f0fdf4" stroke="#6ee7b7" stroke-width="1.5"/>
+  <text font-family="Arial" font-size="12" font-weight="500" fill="#065f46" x="555" y="85" text-anchor="middle">✓ Bien formulada</text>
+  <rect x="480" y="100" width="150" height="60" rx="8" fill="white" stroke="#6ee7b7" stroke-width="0.5"/>
+  <text font-family="Arial" font-size="10" fill="#6b7280" x="555" y="120" text-anchor="middle">¿Cuál es la diferencia</text>
+  <text font-family="Arial" font-size="10" fill="#6b7280" x="555" y="136" text-anchor="middle">entre derecho objetivo</text>
+  <text font-family="Arial" font-size="10" fill="#6b7280" x="555" y="152" text-anchor="middle">y subjetivo?</text>
+  <text font-family="Arial" font-size="11" fill="#059669" x="555" y="185" text-anchor="middle">Concepto central</text>
+  <text font-family="Arial" font-size="11" fill="#059669" x="555" y="202" text-anchor="middle">Respuesta clara</text>
+  <text font-family="Arial" font-size="11" fill="#059669" x="555" y="219" text-anchor="middle">Alto valor de</text>
+  <text font-family="Arial" font-size="11" fill="#059669" x="555" y="236" text-anchor="middle">aprendizaje</text>
+
+  <text font-family="Arial" font-size="12" fill="#9ca3af" x="340" y="320" text-anchor="middle">Las mejores preguntas cubren conceptos centrales con respuestas claras</text>
+</svg>

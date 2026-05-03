@@ -1,0 +1,45 @@
+<svg width="680" height="320" viewBox="0 0 680 320" xmlns="http://www.w3.org/2000/svg">
+  <rect width="680" height="320" fill="white"/>
+  <text font-family="Arial" font-size="16" font-weight="500" fill="#111" x="340" y="30" text-anchor="middle">Analizar parciales anteriores: encontrá los patrones</text>
+
+  <!-- Parcial simulado -->
+  <rect x="40" y="55" width="280" height="220" rx="10" fill="#f9fafb" stroke="#e5e7eb" stroke-width="1"/>
+  <text font-family="Arial" font-size="12" font-weight="500" fill="#374151" x="180" y="80" text-anchor="middle">Parcial anterior</text>
+
+  <rect x="60" y="95" width="240" height="28" rx="6" fill="#d1fae5" stroke="#6ee7b7" stroke-width="0.5"/>
+  <text font-family="Arial" font-size="11" fill="#065f46" x="80" y="114">1. Definir derecho subjetivo</text>
+
+  <rect x="60" y="133" width="240" height="28" rx="6" fill="#d1fae5" stroke="#6ee7b7" stroke-width="0.5"/>
+  <text font-family="Arial" font-size="11" fill="#065f46" x="80" y="152">2. Clasificar fuentes del derecho</text>
+
+  <rect x="60" y="171" width="240" height="28" rx="6" fill="#e5e7eb" stroke="#d1d5db" stroke-width="0.5"/>
+  <text font-family="Arial" font-size="11" fill="#6b7280" x="80" y="190">3. Ejemplo de acto jurídico</text>
+
+  <rect x="60" y="209" width="240" height="28" rx="6" fill="#d1fae5" stroke="#6ee7b7" stroke-width="0.5"/>
+  <text font-family="Arial" font-size="11" fill="#065f46" x="80" y="228">4. Diferencia ley vs costumbre</text>
+
+  <rect x="60" y="247" width="240" height="14" rx="4" fill="#e5e7eb"/>
+
+  <!-- Flechas hacia patrones -->
+  <line x1="320" y1="109" x2="360" y2="109" stroke="#059669" stroke-width="1.5"/>
+  <line x1="320" y1="147" x2="360" y2="147" stroke="#059669" stroke-width="1.5"/>
+  <line x1="320" y1="223" x2="360" y2="185" stroke="#059669" stroke-width="1.5"/>
+
+  <!-- Patrones identificados -->
+  <rect x="360" y="60" width="280" height="220" rx="10" fill="#f0fdf4" stroke="#6ee7b7" stroke-width="1"/>
+  <text font-family="Arial" font-size="12" font-weight="500" fill="#065f46" x="500" y="80" text-anchor="middle">Patrones identificados</text>
+
+  <rect x="375" y="95" width="250" height="50" rx="6" fill="white" stroke="#6ee7b7" stroke-width="0.5"/>
+  <text font-family="Arial" font-size="11" font-weight="500" fill="#059669" x="395" y="115">Temas que siempre entran</text>
+  <text font-family="Arial" font-size="10" fill="#6b7280" x="395" y="133">Definiciones y clasificaciones</text>
+
+  <rect x="375" y="155" width="250" height="50" rx="6" fill="white" stroke="#6ee7b7" stroke-width="0.5"/>
+  <text font-family="Arial" font-size="11" font-weight="500" fill="#059669" x="395" y="175">Tipo de preguntas</text>
+  <text font-family="Arial" font-size="10" fill="#6b7280" x="395" y="193">Comparaciones y distinciones</text>
+
+  <rect x="375" y="215" width="250" height="45" rx="6" fill="white" stroke="#6ee7b7" stroke-width="0.5"/>
+  <text font-family="Arial" font-size="11" font-weight="500" fill="#059669" x="395" y="235">Nivel de detalle esperado</text>
+  <text font-family="Arial" font-size="10" fill="#6b7280" x="395" y="251">Conceptual, no memorístico</text>
+
+  <text font-family="Arial" font-size="12" fill="#9ca3af" x="340" y="305" text-anchor="middle">Los parciales anteriores son la mejor guía de lo que importa</text>
+</svg>

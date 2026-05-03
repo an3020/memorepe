@@ -1,0 +1,40 @@
+<svg width="680" height="340" viewBox="0 0 680 340" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#9ca3af" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <rect width="680" height="340" fill="white"/>
+  <text font-family="Arial" font-size="16" font-weight="500" fill="#111" x="340" y="30" text-anchor="middle">Estudio distribuido vs. maratón de última hora</text>
+
+  <!-- Eje tiempo -->
+  <line x1="60" y1="280" x2="630" y2="280" stroke="#e5e7eb" stroke-width="1" marker-end="url(#arr)"/>
+  <text font-family="Arial" font-size="11" fill="#9ca3af" x="60" y="298" text-anchor="middle">Día 1</text>
+  <text font-family="Arial" font-size="11" fill="#9ca3af" x="200" y="298" text-anchor="middle">Día 3</text>
+  <text font-family="Arial" font-size="11" fill="#9ca3af" x="340" y="298" text-anchor="middle">Día 5</text>
+  <text font-family="Arial" font-size="11" fill="#9ca3af" x="480" y="298" text-anchor="middle">Día 7</text>
+  <text font-family="Arial" font-size="11" font-weight="500" fill="#ef4444" x="600" y="298" text-anchor="middle">Examen</text>
+  <line x1="600" y1="60" x2="600" y2="280" stroke="#fecaca" stroke-width="1" stroke-dasharray="4 4"/>
+
+  <!-- Línea estudio distribuido -->
+  <path d="M60,260 C100,230 140,200 180,190 C220,180 260,170 300,160 C340,150 380,140 420,135 C460,130 500,125 560,120 C575,118 590,115 600,110" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- Puntos de sesión distribuida -->
+  <circle cx="60" cy="260" r="5" fill="#059669"/>
+  <circle cx="160" cy="200" r="5" fill="#059669"/>
+  <circle cx="260" cy="165" r="5" fill="#059669"/>
+  <circle cx="360" cy="148" r="5" fill="#059669"/>
+  <circle cx="460" cy="133" r="5" fill="#059669"/>
+  <circle cx="560" cy="120" r="5" fill="#059669"/>
+
+  <!-- Línea maratón última hora -->
+  <path d="M60,265 L480,265 C500,264 540,240 570,180 C585,150 595,120 600,100" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="6 3"/>
+
+  <!-- Leyenda -->
+  <line x1="80" y1="50" x2="120" y2="50" stroke="#059669" stroke-width="2.5"/>
+  <text font-family="Arial" font-size="12" fill="#059669" x="128" y="54">Estudio distribuido — retención alta y sostenida</text>
+  <line x1="80" y1="72" x2="120" y2="72" stroke="#ef4444" stroke-width="2.5" stroke-dasharray="6 3"/>
+  <text font-family="Arial" font-size="12" fill="#ef4444" x="128" y="76">Maratón de última hora — pico efímero, caída rápida</text>
+
+  <text font-family="Arial" font-size="12" fill="#9ca3af" x="340" y="325" text-anchor="middle">Empezar antes marca la diferencia en el examen y más allá</text>
+</svg>
