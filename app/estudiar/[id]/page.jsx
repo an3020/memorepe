@@ -224,13 +224,13 @@ function EstudiarInner({ params }) {
   }
 
   async function finishSession(correct, wrong, partial) {
-    if (!sessionId) return
-    const xp = correct * 10 + partial * 4
-    await supabase.from('study_sessions')
-      .update({ finished_at: new Date().toISOString(), correct, wrong, partial, xp_earned: xp })
-      .eq('id', sessionId)
-    await supabase.rpc('update_streak', { p_user_id: userId })
-  }
+  if (!sessionId) return
+  const xp = correct * 10 + partial * 4
+  await supabase.from('study_sessions')
+    .update({ finished_at: new Date().toISOString(), correct, wrong, partial, xp_earned: xp })
+    .eq('id', sessionId)
+  await supabase.rpc('update_xp_and_streak', { p_user_id: userId, p_xp_earned: xp })
+}
 
   async function fetchNextReviewDate(questionIds) {
     const { data } = await supabase
