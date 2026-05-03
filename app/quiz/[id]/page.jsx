@@ -67,7 +67,7 @@ export default async function QuizPublico({ params }) {
 
   const { data: quiz } = await supabase
     .from('quizzes')
-    .select('*, users(username, full_name)')
+    .select('*, users(username)')
     .eq('id', id)
     .single()
 
@@ -101,7 +101,7 @@ export default async function QuizPublico({ params }) {
 
   const catStyle = catColors[quiz.category] || catColors.otro
   const username = quiz.users?.username
-  const nombreAutor = quiz.users?.full_name || username
+  const nombreAutor = username
 
   return (
     <div style={{ minHeight: '100vh', background: 'white', fontFamily: 'Arial, sans-serif' }}>
