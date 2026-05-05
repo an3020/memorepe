@@ -24,7 +24,7 @@ export default async function UsuarioPage({ params, searchParams }) {
 
   const { data: autor } = await supabase
     .from('users')
-    .select('id, username, bio, created_at')
+    .select('id, username, bio, location, career, website, show_email, created_at')
     .eq('username', username)
     .single()
 
@@ -129,6 +129,22 @@ export default async function UsuarioPage({ params, searchParams }) {
             {autor.bio && (
               <p style={{ fontSize: '13px', color: '#374151', margin: '0 0 8px 0', lineHeight: '1.5' }}>{autor.bio}</p>
             )}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '8px' }}>
+            {autor.location && (
+              <span style={{ fontSize: '12px', color: '#6b7280' }}>📍 {autor.location}</span>
+            )}
+            {autor.career && (
+              <span style={{ fontSize: '12px', color: '#6b7280' }}>🎓 {autor.career}</span>
+            )}
+            {autor.website && (
+              <a href={autor.website.startsWith('http') ? autor.website : 'https://' + autor.website} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', color: '#059669', textDecoration: 'none' }}>
+                🌐 {autor.website.replace(/^https?:\/\//, '')}
+              </a>
+            )}
+            {autor.show_email && (
+              <span style={{ fontSize: '12px', color: '#6b7280' }}>✉️ {autor.email}</span>
+            )}
+            </div>
             <div style={{ display: 'flex', gap: '16px' }}>
               <span style={{ fontSize: '12px', color: '#9ca3af' }}>{totalQuizzes?.length || 0} quizzes públicos</span>
               <span style={{ fontSize: '12px', color: '#9ca3af' }}>Miembro desde {new Date(autor.created_at).toLocaleDateString('es-AR')}</span>
