@@ -1,5 +1,8 @@
 import { MetadataRoute } from 'next'
 import { createClient } from '@/lib/supabase'
+import fs from 'fs'
+import path from 'path'
+import matter from 'gray-matter'
 
 export const revalidate = 3600 // regenera cada hora
 
@@ -36,6 +39,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   })) || []
 
+  const postsDir = path.join(process.cwd(), 'app/blog/posts')
+  const blogUrls: MetadataRoute.Sitemap = fs.existsSync(postsDir)
+    ? fs.readdirSync(postsDir)
+      .filter(f => f.endsWith('.md'))
+      .map(file => {
+        const { data } = matter(fs.readFileSync(path.join(postsDir, file), 'utf8'))
+        return {
+          url: `https://memorepe.com/blog/${data.slug || file.replace('.md', '')}`,
+          lastModified: new Date(data.date || new Date()),
+          changeFrequency: 'monthly' as const,
+          priority: 0.8,
+        }
+      })
+    : []
+
   return [
     {
       url: 'https://memorepe.com',
@@ -55,6 +73,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'monthly' as const,
       priority: 0.5,
     },
+    {
+      url: 'https://memorepe.com/blog',
+      lastModified: new Date(),
+      changeFrequency: 'weekly' as const,
+      priority: 0.8,
+    },
+    ...blogUrls,
     ...quizSlugUrls,
     ...quizUrls,
     ...userUrls,
