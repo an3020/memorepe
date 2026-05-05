@@ -45,7 +45,6 @@ export default async function EstudiarInicio({ params }) {
     .single()
 
   const isFavorite = !!favorite
-
   const total = quiz.question_count || 0
 
   // Calcular preguntas no vistas
@@ -64,6 +63,31 @@ export default async function EstudiarInicio({ params }) {
 
   const seenIds = new Set(progressData?.map(p => p.question_id) || [])
   const unseenCount = questionIds.filter(qid => !seenIds.has(qid)).length
+
+  // Stats del usuario en este banco
+  const { data: quizProgress } = await supabase
+    .rpc('get_user_quizzes_progress', { p_user_id: user.id, p_quiz_ids: [id] })
+
+  const p = quizProgress?.[0] || null
+  const tieneProgreso = p && p.seen > 0
+
+  // Sesiones en este banco
+  const { data: sessions } = await supabase
+    .from('study_sessions')
+    .select('correct, total_questions, finished_at')
+    .eq('user_id', user.id)
+    .eq('quiz_id', id)
+    .not('finished_at', 'is', null)
+    .order('finished_at', { ascending: false })
+
+  const totalSesiones = sessions?.length || 0
+  const totalCorrectas = sessions?.reduce((sum, s) => sum + (s.correct || 0), 0) || 0
+  const totalPreguntas = sessions?.reduce((sum, s) => sum + (s.total_questions || 0), 0) || 0
+  const precision = totalPreguntas > 0 ? Math.round((totalCorrectas / totalPreguntas) * 100) : null
+  const ultimaSesion = sessions?.[0]?.finished_at
+  const diasDesdeUltima = ultimaSesion
+    ? Math.floor((new Date() - new Date(ultimaSesion)) / (1000 * 60 * 60 * 24))
+    : null
 
   const modos = [
     {
@@ -122,9 +146,10 @@ export default async function EstudiarInicio({ params }) {
         <a href="/dashboard" style={{ fontSize: '13px', color: '#9ca3af', textDecoration: 'none' }}>Volver al dashboard</a>
       </nav>
 
-      <div style={{ maxWidth: '520px', margin: '0 auto', padding: '48px 24px' }}>
+      <div style={{ maxWidth: '520px', margin: '0 auto', padding: '32px 24px' }}>
 
-        <div style={{ marginBottom: '32px' }}>
+        {/* Info del quiz */}
+        <div style={{ marginBottom: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
             <h1 style={{ fontSize: '20px', fontWeight: '500', color: '#111', flex: 1, marginRight: '12px' }}>{quiz.title}</h1>
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -145,29 +170,84 @@ export default async function EstudiarInicio({ params }) {
             </p>
           )}
           {quiz.notes && (
-            <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#78350f', marginTop: '12px', lineHeight: '1.5' }}>
+            <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#78350f', marginTop: '10px', lineHeight: '1.5' }}>
               {quiz.notes}
             </div>
           )}
         </div>
 
-        <div style={{ fontSize: '13px', fontWeight: '500', color: '#111', marginBottom: '16px' }}>
-          Elegi como queres estudiar hoy
+        {/* Stats del usuario en este banco */}
+        {tieneProgreso && (
+          <div style={{ background: '#f9fafb', borderRadius: '12px', padding: '14px 16px', marginBottom: '20px' }}>
+            <div style={{ fontSize: '12px', fontWeight: '500', color: '#6b7280', marginBottom: '10px' }}>Tu progreso en este banco</div>
+
+            {/* Barra de progreso */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginBottom: '10px' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '15px', fontWeight: '500', color: '#374151' }}>{p.seen_pct}%</div>
+                <div style={{ fontSize: '10px', color: '#9ca3af' }}>Vistas</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '15px', fontWeight: '500', color: '#d97706' }}>{p.in_progress_pct}%</div>
+                <div style={{ fontSize: '10px', color: '#9ca3af' }}>En progreso</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '15px', fontWeight: '500', color: '#059669' }}>{p.dominated_pct}%</div>
+                <div style={{ fontSize: '10px', color: '#9ca3af' }}>Dominadas</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '15px', fontWeight: '500', color: '#0369a1' }}>{p.expert_pct}%</div>
+                <div style={{ fontSize: '10px', color: '#9ca3af' }}>Experto</div>
+              </div>
+            </div>
+
+            {/* Barra tricolor */}
+            <div style={{ height: '4px', background: '#e5e7eb', borderRadius: '4px', overflow: 'hidden', marginBottom: '10px' }}>
+              <div style={{ height: '100%', display: 'flex' }}>
+                <div style={{ width: p.expert_pct + '%', background: '#0369a1' }} />
+                <div style={{ width: Math.max(0, p.dominated_pct - p.expert_pct) + '%', background: '#059669' }} />
+                <div style={{ width: Math.max(0, p.in_progress_pct - p.dominated_pct) + '%', background: '#fcd34d' }} />
+              </div>
+            </div>
+
+            {/* 3 tarjetitas */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
+              <div style={{ background: 'white', borderRadius: '8px', padding: '8px', textAlign: 'center', border: '1px solid #e5e7eb' }}>
+                <div style={{ fontSize: '15px', fontWeight: '500', color: '#111' }}>{totalSesiones}</div>
+                <div style={{ fontSize: '10px', color: '#9ca3af' }}>Sesiones</div>
+              </div>
+              <div style={{ background: 'white', borderRadius: '8px', padding: '8px', textAlign: 'center', border: '1px solid #e5e7eb' }}>
+                <div style={{ fontSize: '15px', fontWeight: '500', color: '#059669' }}>{precision !== null ? precision + '%' : '-'}</div>
+                <div style={{ fontSize: '10px', color: '#9ca3af' }}>Precisión</div>
+              </div>
+              <div style={{ background: 'white', borderRadius: '8px', padding: '8px', textAlign: 'center', border: '1px solid #e5e7eb' }}>
+                <div style={{ fontSize: '15px', fontWeight: '500', color: '#111' }}>
+                  {diasDesdeUltima === null ? '-' : diasDesdeUltima === 0 ? 'Hoy' : diasDesdeUltima === 1 ? 'Ayer' : diasDesdeUltima + 'd'}
+                </div>
+                <div style={{ fontSize: '10px', color: '#9ca3af' }}>Última sesión</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modos de estudio */}
+        <div style={{ fontSize: '13px', fontWeight: '500', color: '#111', marginBottom: '12px' }}>
+          Elige como quieres estudiar hoy
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
 
           {unseenCount > 0 && (
             <a
               href={'/estudiar/' + id + '?n=new'}
-              style={{ textDecoration: 'none', display: 'block', border: '2px solid #059669', borderRadius: '12px', padding: '16px 20px', background: '#f0fdf4', cursor: 'pointer' }}
+              style={{ textDecoration: 'none', display: 'block', border: '2px solid #059669', borderRadius: '12px', padding: '14px 18px', background: '#f0fdf4', cursor: 'pointer' }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
                 <span style={{ fontSize: '14px', fontWeight: '500', color: '#065f46' }}>Solo preguntas nuevas</span>
                 <span style={{ fontSize: '13px', fontWeight: '500', color: '#065f46' }}>{unseenCount} sin ver</span>
               </div>
               <p style={{ fontSize: '12px', color: '#065f46', opacity: 0.8, lineHeight: '1.5', margin: 0 }}>
-                Aprendé primero lo que nunca viste, sin mezclar con el repaso.
+                Aprende primero lo que nunca viste, sin mezclar con el repaso.
               </p>
             </a>
           )}
@@ -176,9 +256,9 @@ export default async function EstudiarInicio({ params }) {
             <a
               key={modo.key}
               href={'/estudiar/' + id + '?n=' + modo.key}
-              style={{ textDecoration: 'none', display: 'block', border: '1px solid', borderColor: modo.colorBorder, borderRadius: '12px', padding: '16px 20px', background: modo.color, cursor: 'pointer' }}
+              style={{ textDecoration: 'none', display: 'block', border: '1px solid', borderColor: modo.colorBorder, borderRadius: '12px', padding: '14px 18px', background: modo.color, cursor: 'pointer' }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
                 <span style={{ fontSize: '14px', fontWeight: '500', color: modo.colorText }}>{modo.nombre}</span>
                 <span style={{ fontSize: '13px', fontWeight: '500', color: modo.colorText }}>{modo.preguntas} preguntas</span>
               </div>
