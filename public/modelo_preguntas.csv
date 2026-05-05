@@ -1,0 +1,7 @@
+pregunta,opcion1,opcion2,opcion3,opcion4,opcion5,correctas,explicacion
+"¿Cuál es la capital de México?","Ciudad de México","Guadalajara","Monterrey","Puebla",,1,"Ciudad de México es la capital y ciudad más poblada de México."
+"¿En qué año se independizó Colombia?","1810","1819","1821","1830",,2,"Colombia declaró su independencia de España el 7 de agosto de 1819."
+"¿Cuáles de estos países forman parte de América del Sur?","Brasil","México","Argentina","Cuba","Perú","1,3,5","Brasil, Argentina y Perú son países de América del Sur. México y Cuba pertenecen a América del Norte y el Caribe."
+"¿Quién escribió Cien años de soledad?","Mario Vargas Llosa","Gabriel García Márquez","Jorge Luis Borges","Octavio Paz",,2,"Gabriel García Márquez escribió Cien años de soledad en 1967. Es la obra más representativa del realismo mágico latinoamericano."
+"¿Cuáles son océanos que bordean América del Sur?","Atlántico","Índico","Pacífico","Ártico",,1 3,"El océano Atlántico bordea la costa este y el Pacífico la costa oeste de América del Sur."
+"La siguiente afirmación es correcta: El español es el idioma oficial de Brasil.","Verdadero","Falso",,,,2,"El idioma oficial de Brasil es el portugués. Es el único país de América del Sur donde no se habla español como idioma oficial."
