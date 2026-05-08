@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import FeedbackButton from '@/app/components/FeedbackButton'
 import BuscadorExplorar from '@/app/components/BuscadorExplorar'
+import ModalQuiz from '@/app/components/ModalQuiz'
 
 export default async function Explorar({ searchParams }) {
   const cookieStore = await cookies()
@@ -33,7 +34,6 @@ export default async function Explorar({ searchParams }) {
   let autorEncontrado = null
 
   if (esBusquedaAutor) {
-    // Buscar por username
     const username = busqueda.slice(1).toLowerCase()
     const { data: usuarioData } = await supabase
       .from('users')
@@ -55,7 +55,6 @@ export default async function Explorar({ searchParams }) {
       quizzes = data || []
     }
   } else {
-    // Búsqueda normal
     let query = supabase
       .from('quizzes')
       .select('*, users(username)')
@@ -91,13 +90,13 @@ export default async function Explorar({ searchParams }) {
   ]
 
   const catColors = {
-    derecho: { bg: '#e0f2fe', color: '#0369a1' },
+    derecho:  { bg: '#e0f2fe', color: '#0369a1' },
     medicina: { bg: '#d1fae5', color: '#065f46' },
     economia: { bg: '#fef3c7', color: '#92400e' },
     historia: { bg: '#fce7f3', color: '#9d174d' },
-    idiomas: { bg: '#ede9fe', color: '#5b21b6' },
-    exactas: { bg: '#e0e7ff', color: '#3730a3' },
-    otro: { bg: '#f3f4f6', color: '#374151' },
+    idiomas:  { bg: '#ede9fe', color: '#5b21b6' },
+    exactas:  { bg: '#e0e7ff', color: '#3730a3' },
+    otro:     { bg: '#f3f4f6', color: '#374151' },
   }
 
   const pillBase = { fontSize: '12px', padding: '5px 14px', borderRadius: '20px', border: '1px solid #e5e7eb', color: '#6b7280', textDecoration: 'none', display: 'inline-block' }
@@ -180,28 +179,66 @@ export default async function Explorar({ searchParams }) {
               const p = progressMap[quiz.id]
               const tieneProgreso = p && p.seen > 0
 
+              // Línea de metadata (solo campos no nulos)
+              const metaParts = [
+                quiz.subject,
+                quiz.faculty,
+                quiz.teacher && 'Prof. ' + quiz.teacher,
+                quiz.year_course,
+              ].filter(Boolean)
+
               return (
-                <div key={quiz.id} style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '16px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                <div key={quiz.id} style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column' }}>
+
+                  {/* Categoría */}
+                  <div style={{ marginBottom: '8px' }}>
                     <span style={{ fontSize: '11px', fontWeight: '500', padding: '2px 8px', borderRadius: '6px', background: catStyle.bg, color: catStyle.color }}>
                       {quiz.category || 'Otro'}
                     </span>
                   </div>
+
+                  {/* Título */}
                   <div style={{ fontSize: '14px', fontWeight: '500', color: '#111', marginBottom: '4px', lineHeight: '1.3' }}>
                     {quiz.title}
                   </div>
-                  {quiz.subject && (
-                    <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '8px' }}>
-                      {quiz.subject}{quiz.faculty ? ' · ' + quiz.faculty : ''}
+
+                  {/* Metadata: materia · facultad · profesor · año */}
+                  {metaParts.length > 0 && (
+                    <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '10px', lineHeight: '1.5' }}>
+                      {metaParts.join(' · ')}
                     </div>
                   )}
-                  <div style={{ display: 'flex', gap: '12px', marginBottom: '10px' }}>
+
+                  {/* Descripción truncada (2 líneas) */}
+                  {quiz.description && (
+                    <div style={{
+                      fontSize: '12px', color: '#6b7280', marginBottom: '10px', lineHeight: '1.5',
+                      display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                    }}>
+                      {quiz.description}
+                    </div>
+                  )}
+
+                  {/* Notas truncadas (2 líneas) */}
+                  {quiz.notes && (
+                    <div style={{
+                      fontSize: '12px', color: '#78350f', background: '#fffbeb', border: '1px solid #fde68a',
+                      borderRadius: '6px', padding: '8px 10px', marginBottom: '10px', lineHeight: '1.4',
+                      display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                    }}>
+                      {quiz.notes}
+                    </div>
+                  )}
+
+                  {/* Stats */}
+                  <div style={{ display: 'flex', gap: '12px', marginBottom: tieneProgreso ? '10px' : '0' }}>
                     <span style={{ fontSize: '12px', color: '#9ca3af' }}>{quiz.question_count} preguntas</span>
-                    <span style={{ fontSize: '12px', color: '#9ca3af' }}>{quiz.student_count || 0} estudiantes</span>
+                    <span style={{ fontSize: '12px', color: '#9ca3af' }}>{quiz.student_count || 0} estudiando</span>
                   </div>
 
+                  {/* Progreso */}
                   {tieneProgreso && (
-                    <div style={{ marginBottom: '10px', padding: '8px 10px', background: '#f9fafb', borderRadius: '8px' }}>
+                    <div style={{ marginTop: '10px', padding: '8px 10px', background: '#f9fafb', borderRadius: '8px' }}>
                       <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', fontSize: '11px', marginBottom: '6px' }}>
                         <span style={{ color: '#6b7280' }}>Round {p.round}</span>
                         <span style={{ color: '#059669', fontWeight: '500' }}>{p.dominated_pct}% dominadas</span>
@@ -214,21 +251,20 @@ export default async function Explorar({ searchParams }) {
                     </div>
                   )}
 
-                  {quiz.notes && (
-                    <div style={{ fontSize: '12px', color: '#6b7280', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '6px', padding: '8px 10px', marginBottom: '10px', lineHeight: '1.4' }}>
-                      {quiz.notes}
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f0f0f0', paddingTop: '10px' }}>
+                  {/* Footer */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f0f0f0', paddingTop: '10px', marginTop: 'auto', paddingTop: '10px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                       {username && (
                         <a href={'/usuario/' + username} style={{ fontSize: '11px', color: '#059669', fontWeight: '500', textDecoration: 'none' }}>@{username}</a>
                       )}
                       <span style={{ fontSize: '11px', color: '#9ca3af' }}>{fechaActualizacion}</span>
                     </div>
-                    <a href={'/estudiar/' + quiz.id + '/inicio'} style={{ fontSize: '12px', fontWeight: '500', color: '#065f46', background: '#d1fae5', border: '1px solid #6ee7b7', padding: '5px 12px', borderRadius: '6px', textDecoration: 'none' }}>
-                      {tieneProgreso ? 'Continuar' : 'Estudiar'}
-                    </a>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <ModalQuiz quiz={quiz} progressMap={progressMap} />
+                      <a href={'/estudiar/' + quiz.id + '/inicio'} style={{ fontSize: '12px', fontWeight: '500', color: '#065f46', background: '#d1fae5', border: '1px solid #6ee7b7', padding: '5px 12px', borderRadius: '6px', textDecoration: 'none' }}>
+                        {tieneProgreso ? 'Continuar' : 'Estudiar'}
+                      </a>
+                    </div>
                   </div>
                 </div>
               )
