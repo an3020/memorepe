@@ -60,7 +60,7 @@ export default async function QuizSlug({ params }) {
 
   const { data: quiz } = await supabase
     .from('quizzes')
-    .select('*, users(username, full_name)')
+    .select('*, users(username)')
     .eq('slug', slug)
     .single()
 
@@ -95,6 +95,17 @@ export default async function QuizSlug({ params }) {
   const catStyle = catColors[quiz.category] || catColors.otro
   const username = quiz.users?.username
 
+  // Filas de metadata: solo las no nulas
+  const metaItems = [
+    quiz.subject     && { label: 'Materia',     value: quiz.subject },
+    quiz.faculty     && { label: 'Facultad',     value: quiz.faculty },
+    quiz.teacher     && { label: 'Profesor',     value: quiz.teacher },
+    quiz.year_course && { label: 'Año / Curso',  value: quiz.year_course },
+    username         && { label: 'Autor',        value: '@' + username, href: '/usuario/' + username },
+    { label: 'Preguntas',  value: quiz.question_count },
+    { label: 'Estudiando', value: quiz.student_count || 0 },
+  ].filter(Boolean)
+
   return (
     <div style={{ minHeight: '100vh', background: 'white', fontFamily: 'Arial, sans-serif' }}>
       <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 24px', borderBottom: '1px solid #f0f0f0' }}>
@@ -111,40 +122,54 @@ export default async function QuizSlug({ params }) {
 
       <div style={{ maxWidth: '680px', margin: '0 auto', padding: '48px 24px' }}>
 
+        {/* Categoría */}
         <div style={{ marginBottom: '12px' }}>
           <span style={{ fontSize: '11px', fontWeight: '500', padding: '2px 8px', borderRadius: '6px', background: catStyle.bg, color: catStyle.color }}>
             {quiz.category || 'Otro'}
           </span>
         </div>
 
-        <h1 style={{ fontSize: '32px', fontWeight: '500', color: '#111', lineHeight: '1.2', marginBottom: '16px', letterSpacing: '-0.5px' }}>
+        {/* Título */}
+        <h1 style={{ fontSize: '32px', fontWeight: '500', color: '#111', lineHeight: '1.2', marginBottom: '24px', letterSpacing: '-0.5px' }}>
           {quiz.title}
         </h1>
 
-        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap' }}>
-          {username && (
-            <a href={'/usuario/' + username} style={{ fontSize: '13px', color: '#059669', textDecoration: 'none', fontWeight: '500' }}>
-              @{username}
-            </a>
-          )}
-          <span style={{ fontSize: '13px', color: '#9ca3af' }}>{quiz.question_count} preguntas</span>
-          {quiz.subject && <span style={{ fontSize: '13px', color: '#9ca3af' }}>{quiz.subject}</span>}
-          {quiz.faculty && <span style={{ fontSize: '13px', color: '#9ca3af' }}>{quiz.faculty}</span>}
-          {quiz.student_count > 0 && <span style={{ fontSize: '13px', color: '#9ca3af' }}>{quiz.student_count} estudiantes</span>}
+        {/* Tabla de metadata */}
+        <div style={{ border: '1px solid #e5e7eb', borderRadius: '12px', overflow: 'hidden', marginBottom: '24px' }}>
+          {metaItems.map(({ label, value, href }, i) => (
+            <div key={label} style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '11px 16px',
+              background: i % 2 === 0 ? 'white' : '#f9fafb',
+              borderBottom: i < metaItems.length - 1 ? '1px solid #f0f0f0' : 'none',
+            }}>
+              <span style={{ fontSize: '13px', color: '#9ca3af' }}>{label}</span>
+              {href
+                ? <a href={href} style={{ fontSize: '13px', fontWeight: '500', color: '#059669', textDecoration: 'none' }}>{value}</a>
+                : <span style={{ fontSize: '13px', fontWeight: '500', color: '#111' }}>{value}</span>
+              }
+            </div>
+          ))}
         </div>
 
+        {/* Descripción */}
         {quiz.description && (
           <p style={{ fontSize: '15px', color: '#374151', lineHeight: '1.7', marginBottom: '16px' }}>
             {quiz.description}
           </p>
         )}
 
+        {/* Notas */}
         {quiz.notes && (
           <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '14px 16px', marginBottom: '24px', fontSize: '14px', color: '#78350f', lineHeight: '1.5' }}>
+            <p style={{ fontSize: '11px', fontWeight: '600', color: '#92400e', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Notas del autor
+            </p>
             {quiz.notes}
           </div>
         )}
 
+        {/* CTA */}
         <div style={{ background: '#f0fdf4', border: '1px solid #6ee7b7', borderRadius: '16px', padding: '28px', marginBottom: '40px', textAlign: 'center' }}>
           <div style={{ fontSize: '32px', marginBottom: '12px' }}>🎯</div>
           <h2 style={{ fontSize: '18px', fontWeight: '500', color: '#065f46', marginBottom: '8px' }}>
@@ -164,6 +189,7 @@ export default async function QuizSlug({ params }) {
           </p>
         </div>
 
+        {/* Vista previa preguntas */}
         {questions && questions.length > 0 && (
           <div style={{ marginBottom: '40px' }}>
             <h2 style={{ fontSize: '18px', fontWeight: '500', color: '#111', marginBottom: '6px' }}>
@@ -201,6 +227,7 @@ export default async function QuizSlug({ params }) {
           </div>
         )}
 
+        {/* Qué es Memorepe */}
         <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '32px', marginBottom: '32px' }}>
           <h2 style={{ fontSize: '18px', fontWeight: '500', color: '#111', marginBottom: '12px' }}>
             ¿Qué es Memorepe?
