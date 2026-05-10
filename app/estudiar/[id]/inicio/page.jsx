@@ -153,7 +153,7 @@ export default async function EstudiarInicio({ params }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
             <h1 style={{ fontSize: '20px', fontWeight: '500', color: '#111', flex: 1, marginRight: '12px' }}>{quiz.title}</h1>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <ShareButton quizId={id} />
+              <ShareButton quizId={id} quizSlug={quiz.slug} />
               <FavoriteButton quizId={id} userId={user.id} initialFavorite={isFavorite} />
             </div>
           </div>

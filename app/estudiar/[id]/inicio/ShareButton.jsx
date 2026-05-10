@@ -2,11 +2,12 @@
 
 import { useState } from 'react'
 
-export default function ShareButton({ quizId }) {
+export default function ShareButton({ quizId, quizSlug }) {
   const [copied, setCopied] = useState(false)
 
   async function handleShare() {
-    const url = window.location.origin + '/quiz/' + quizId
+    const path = quizSlug ? '/q/' + quizSlug : '/quiz/' + quizId
+    const url = window.location.origin + path
     await navigator.clipboard.writeText(url)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
