@@ -36,6 +36,7 @@ export async function generateMetadata({ params }) {
       title: quiz.title + ' — Memorepe',
       description: desc,
       type: 'website',
+      url: 'https://memorepe.com/quiz/' + id,
     },
   }
 }
@@ -93,6 +94,7 @@ export default async function QuizPublico({ params }) {
 
   const catStyle = catColors[quiz.category] || catColors.otro
   const username = quiz.users?.username
+  const pageUrl = 'https://memorepe.com/quiz/' + id
 
   const metaItems = [
     quiz.subject     && { label: 'Materia',     value: quiz.subject },
@@ -104,8 +106,53 @@ export default async function QuizPublico({ params }) {
     { label: 'Estudiando', value: quiz.student_count || 0 },
   ].filter(Boolean)
 
+  // JSON-LD schemas
+  const quizSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Quiz',
+    'name': quiz.title,
+    'description': quiz.description || `${quiz.question_count} preguntas de ${quiz.subject || 'estudio'} con repetición espaciada en Memorepe.`,
+    'url': pageUrl,
+    'numberOfQuestions': quiz.question_count,
+    ...(quiz.subject && { 'about': { '@type': 'Thing', 'name': quiz.subject } }),
+    ...(quiz.faculty && { 'educationalAlignment': { '@type': 'AlignmentObject', 'targetName': quiz.faculty } }),
+    'provider': {
+      '@type': 'Organization',
+      'name': 'Memorepe',
+      'url': 'https://memorepe.com',
+    },
+    ...(username && {
+      'author': {
+        '@type': 'Person',
+        'name': '@' + username,
+        'url': 'https://memorepe.com/usuario/' + username,
+      }
+    }),
+  }
+
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    'itemListElement': [
+      { '@type': 'ListItem', 'position': 1, 'name': 'Inicio', 'item': 'https://memorepe.com' },
+      { '@type': 'ListItem', 'position': 2, 'name': 'Explorar', 'item': 'https://memorepe.com/explorar' },
+      { '@type': 'ListItem', 'position': 3, 'name': quiz.title, 'item': pageUrl },
+    ],
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: 'white', fontFamily: 'Arial, sans-serif' }}>
+
+      {/* JSON-LD */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(quizSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+
       <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 24px', borderBottom: '1px solid #f0f0f0' }}>
         <a href="/" style={{ fontSize: '18px', fontWeight: '500', letterSpacing: '-0.5px', textDecoration: 'none', color: '#111' }}>
           memo<span style={{ color: '#059669' }}>repe</span>
