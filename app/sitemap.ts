@@ -4,7 +4,7 @@ import fs from 'fs'
 import path from 'path'
 import matter from 'gray-matter'
 
-export const revalidate = 3600 // regenera cada hora
+export const revalidate = 0 // siempre fresco
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = createClient()
@@ -18,13 +18,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .from('users')
     .select('username, created_at')
 
-  const quizUrls = quizzes?.map(quiz => ({
+  // Solo quizzes SIN slug (los viejos)
+  const quizUrls = quizzes?.filter(q => !q.slug).map(quiz => ({
     url: `https://memorepe.com/quiz/${quiz.id}`,
     lastModified: new Date(quiz.updated_at || new Date()),
     changeFrequency: 'weekly' as const,
     priority: 0.7,
   })) || []
 
+  // Solo quizzes CON slug (los nuevos, mayor prioridad)
   const quizSlugUrls = quizzes?.filter(q => q.slug).map(quiz => ({
     url: `https://memorepe.com/q/${quiz.slug}`,
     lastModified: new Date(quiz.updated_at || new Date()),
