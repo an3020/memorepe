@@ -2,15 +2,29 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+// Rutas públicas que Google debe poder indexar
+const publicRoutes = [
+  '/q/',
+  '/quiz/',
+  '/explorar',
+  '/ayuda',
+  '/blog',
+  '/usuario/',
+  '/privacidad',
+  '/terminos',
+]
+
+function isPublicRoute(pathname: string) {
+  return publicRoutes.some(r => pathname.startsWith(r)) || pathname === '/'
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Rutas que nunca bloqueamos (auth, assets, página de bloqueo)
+  // Rutas que nunca bloqueamos
   const bypass = [
     '/bloqueado',
     '/auth',
-    '/privacidad',
-    '/terminos',
     '/_next',
     '/favicon',
     '/api/auth',
@@ -54,6 +68,11 @@ export async function middleware(request: NextRequest) {
     if (profile?.blocked) {
       return NextResponse.redirect(new URL('/bloqueado', request.url))
     }
+  }
+
+  // Para rutas públicas sin usuario, forzar headers de cache públicos
+  if (!user && isPublicRoute(pathname)) {
+    response.headers.set('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400')
   }
 
   return response
