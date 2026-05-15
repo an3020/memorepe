@@ -4,6 +4,25 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
+const CONTENT_TYPES = [
+  { value: 'universitario', label: 'Universitario' },
+  { value: 'conducir',      label: 'Examen de conducir' },
+  { value: 'certificacion', label: 'Certificación profesional' },
+  { value: 'idiomas',       label: 'Idiomas' },
+  { value: 'oposiciones',   label: 'Oposiciones / Concurso público' },
+]
+
+function getLabels(type) {
+  const map = {
+    universitario: { subject: 'Materia', faculty: 'Facultad', teacher: 'Cátedra', year_course: 'Año / Curso' },
+    conducir:      { subject: 'Municipio / Distrito', faculty: 'País', teacher: 'Curso', year_course: 'Año' },
+    certificacion: { subject: 'Certificación', faculty: 'Organismo', teacher: 'Promoción', year_course: 'Año' },
+    idiomas:       { subject: 'Examen', faculty: 'Nivel', teacher: 'Comisión', year_course: 'Año' },
+    oposiciones:   { subject: 'Organismo', faculty: 'País', teacher: 'Convocatoria', year_course: 'Año' },
+  }
+  return map[type] || map.universitario
+}
+
 export default function GestionarQuiz({ params }) {
   const router = useRouter()
   const supabase = createClient()
@@ -45,6 +64,7 @@ export default function GestionarQuiz({ params }) {
         description: quizData.description || '',
         notes: quizData.notes || '',
         category: quizData.category || '',
+        content_type: quizData.content_type || 'universitario',
         visibility: quizData.visibility || 'public',
         subject: quizData.subject || '',
         faculty: quizData.faculty || '',
@@ -63,6 +83,8 @@ export default function GestionarQuiz({ params }) {
     }
     load()
   }, [])
+
+  const labels = editForm ? getLabels(editForm.content_type) : getLabels('universitario')
 
   function toggleSelect(qId) {
     setSelectedIds(prev => {
@@ -113,7 +135,6 @@ export default function GestionarQuiz({ params }) {
     if (editingQuestion.options.length <= 2) return
     const updated = { ...editingQuestion }
     updated.options = updated.options.filter((_, i) => i !== oIndex)
-    // Si era la única correcta en tipo single, marcar la primera como correcta
     if (updated.type === 'single' && !updated.options.some(o => o.is_correct)) {
       updated.options[0].is_correct = true
     }
@@ -130,7 +151,6 @@ export default function GestionarQuiz({ params }) {
 
     for (const opt of q.options) {
       if (opt.isNew) {
-        // Insertar opción nueva
         await supabase.from('options').insert({
           question_id: q.id,
           body: opt.body,
@@ -144,7 +164,6 @@ export default function GestionarQuiz({ params }) {
       }
     }
 
-    // Borrar opciones eliminadas (las que estaban antes y ya no están)
     const originalQuestion = questions.find(qq => qq.id === q.id)
     const originalIds = originalQuestion?.options.map(o => o.id) || []
     const currentIds = q.options.filter(o => !o.isNew).map(o => o.id)
@@ -153,7 +172,6 @@ export default function GestionarQuiz({ params }) {
       await supabase.from('options').delete().eq('id', deletedId)
     }
 
-    // Recargar la pregunta actualizada
     const { data: updatedOptions } = await supabase
       .from('options').select('*').eq('question_id', q.id).order('order')
 
@@ -237,11 +255,6 @@ export default function GestionarQuiz({ params }) {
   async function deleteQuiz() {
     await supabase.from('quizzes').delete().eq('id', quizId)
     router.push('/dashboard')
-  }
-
-  async function resolveReport(reportId) {
-    await supabase.from('question_reports').update({ status: 'resolved' }).eq('id', reportId)
-    setReports(reports.map(r => r.id === reportId ? { ...r, status: 'resolved' } : r))
   }
 
   const pendingReports = reports.filter(r => r.status === 'pending')
@@ -406,6 +419,32 @@ export default function GestionarQuiz({ params }) {
 
         <div style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
           <div style={{ fontSize: '13px', fontWeight: '500', color: '#111', marginBottom: '16px' }}>Informacion del quiz</div>
+
+          {/* Tipo de contenido */}
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '6px' }}>Tipo de contenido</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {CONTENT_TYPES.map(ct => (
+                <button
+                  key={ct.value}
+                  type="button"
+                  onClick={() => setEditForm({ ...editForm, content_type: ct.value })}
+                  style={{
+                    padding: '5px 12px', fontSize: '12px', border: '1px solid',
+                    borderColor: editForm.content_type === ct.value ? '#059669' : '#e5e7eb',
+                    borderRadius: '20px',
+                    background: editForm.content_type === ct.value ? '#d1fae5' : 'white',
+                    color: editForm.content_type === ct.value ? '#065f46' : '#6b7280',
+                    fontWeight: editForm.content_type === ct.value ? '500' : '400',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {ct.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div style={{ marginBottom: '12px' }}>
             <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Nombre *</label>
             <input style={input} value={editForm.title} onChange={e => setEditForm({ ...editForm, title: e.target.value })} />
@@ -433,19 +472,23 @@ export default function GestionarQuiz({ params }) {
               </select>
             </div>
             <div>
-              <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Materia</label>
+              <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '4px' }}>{labels.subject}</label>
               <input style={input} value={editForm.subject} onChange={e => setEditForm({ ...editForm, subject: e.target.value })} />
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
             <div>
-              <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Facultad</label>
+              <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '4px' }}>{labels.faculty}</label>
               <input style={input} value={editForm.faculty} onChange={e => setEditForm({ ...editForm, faculty: e.target.value })} />
             </div>
             <div>
-              <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Docente</label>
+              <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '4px' }}>{labels.teacher}</label>
               <input style={input} value={editForm.teacher} onChange={e => setEditForm({ ...editForm, teacher: e.target.value })} />
             </div>
+          </div>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '4px' }}>{labels.year_course}</label>
+            <input style={{ ...input, maxWidth: '200px' }} value={editForm.year_course} onChange={e => setEditForm({ ...editForm, year_course: e.target.value })} />
           </div>
           <button onClick={saveInfo} disabled={saving} style={{ padding: '8px 18px', fontSize: '13px', fontWeight: '500', color: 'white', background: saving ? '#9ca3af' : '#059669', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
             {saving ? 'Guardando...' : 'Guardar cambios'}
@@ -507,9 +550,7 @@ export default function GestionarQuiz({ params }) {
                           <div onClick={() => updateEditOption(oIndex, 'is_correct', !opt.is_correct)} style={{ width: '18px', height: '18px', borderRadius: editingQuestion.type === 'single' ? '50%' : '4px', border: '2px solid', borderColor: opt.is_correct ? '#059669' : '#d1d5db', background: opt.is_correct ? '#059669' : 'white', cursor: 'pointer', flexShrink: 0 }} />
                           <input style={{ ...input }} value={opt.body} onChange={e => updateEditOption(oIndex, 'body', e.target.value)} />
                           {editingQuestion.options.length > 2 && (
-                            <button onClick={() => removeOption(oIndex)} style={{ background: 'none', border: 'none', color: '#d1d5db', fontSize: '16px', cursor: 'pointer', flexShrink: 0, lineHeight: 1, padding: '0 2px' }} title="Eliminar opción">
-                              ×
-                            </button>
+                            <button onClick={() => removeOption(oIndex)} style={{ background: 'none', border: 'none', color: '#d1d5db', fontSize: '16px', cursor: 'pointer', flexShrink: 0, lineHeight: 1, padding: '0 2px' }}>×</button>
                           )}
                         </div>
                       ))}

@@ -1,6 +1,17 @@
 'use client'
 import { useState, useEffect } from 'react'
 
+function getLabels(type) {
+  const map = {
+    universitario: { subject: 'Materia', faculty: 'Facultad', teacher: 'Cátedra', year_course: 'Año / Curso' },
+    conducir:      { subject: 'Municipio / Distrito', faculty: 'País', teacher: 'Curso', year_course: 'Año' },
+    certificacion: { subject: 'Certificación', faculty: 'Organismo', teacher: 'Promoción', year_course: 'Año' },
+    idiomas:       { subject: 'Examen', faculty: 'Nivel', teacher: 'Comisión', year_course: 'Año' },
+    oposiciones:   { subject: 'Organismo', faculty: 'País', teacher: 'Convocatoria', year_course: 'Año' },
+  }
+  return map[type] || map.universitario
+}
+
 export default function ModalQuiz({ quiz, progressMap = {} }) {
   const [open, setOpen] = useState(false)
 
@@ -28,13 +39,14 @@ export default function ModalQuiz({ quiz, progressMap = {} }) {
   const quizUrl = quiz.slug ? '/q/' + quiz.slug : '/quiz/' + quiz.id
   const p = progressMap[quiz.id]
   const tieneProgreso = p && p.seen > 0
+  const labels = getLabels(quiz.content_type)
 
   const rows = [
-    quiz.subject   && { label: 'Materia',    value: quiz.subject },
-    quiz.faculty   && { label: 'Facultad',   value: quiz.faculty },
-    quiz.teacher   && { label: 'Profesor',   value: quiz.teacher },
-    quiz.year_course && { label: 'Año / Curso', value: quiz.year_course },
-    username       && { label: 'Autor',      value: '@' + username, href: '/usuario/' + username },
+    quiz.subject     && { label: labels.subject,     value: quiz.subject },
+    quiz.faculty     && { label: labels.faculty,     value: quiz.faculty },
+    quiz.teacher     && { label: labels.teacher,     value: quiz.teacher },
+    quiz.year_course && { label: labels.year_course, value: quiz.year_course },
+    username         && { label: 'Autor',            value: '@' + username, href: '/usuario/' + username },
     { label: 'Preguntas',  value: quiz.question_count },
     { label: 'Estudiando', value: quiz.student_count || 0 },
   ].filter(Boolean)
@@ -81,7 +93,6 @@ export default function ModalQuiz({ quiz, progressMap = {} }) {
               boxShadow: '0 20px 60px rgba(0,0,0,0.18)',
             }}
           >
-            {/* Cerrar */}
             <button
               onClick={() => setOpen(false)}
               style={{
@@ -93,7 +104,6 @@ export default function ModalQuiz({ quiz, progressMap = {} }) {
               ×
             </button>
 
-            {/* Categoría */}
             <span style={{
               fontSize: '11px', fontWeight: '500',
               padding: '3px 10px', borderRadius: '6px',
@@ -103,12 +113,10 @@ export default function ModalQuiz({ quiz, progressMap = {} }) {
               {quiz.category || 'Otro'}
             </span>
 
-            {/* Título */}
             <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#111', margin: '0 0 16px' }}>
               {quiz.title}
             </h2>
 
-            {/* Descripción */}
             {quiz.description && (
               <div style={{ marginBottom: '16px' }}>
                 <p style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -120,7 +128,6 @@ export default function ModalQuiz({ quiz, progressMap = {} }) {
               </div>
             )}
 
-            {/* Notas */}
             {quiz.notes && (
               <div style={{
                 marginBottom: '16px',
@@ -136,7 +143,6 @@ export default function ModalQuiz({ quiz, progressMap = {} }) {
               </div>
             )}
 
-            {/* Tabla de datos */}
             <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '16px', marginBottom: '20px' }}>
               {rows.map(({ label, value, href }) => (
                 <div key={label} style={{
@@ -152,7 +158,6 @@ export default function ModalQuiz({ quiz, progressMap = {} }) {
               ))}
             </div>
 
-            {/* Progreso si tiene */}
             {tieneProgreso && (
               <div style={{ marginBottom: '20px', padding: '12px', background: '#f9fafb', borderRadius: '10px' }}>
                 <p style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -170,7 +175,6 @@ export default function ModalQuiz({ quiz, progressMap = {} }) {
               </div>
             )}
 
-            {/* CTA */}
             <a
               href={'/estudiar/' + quiz.id + '/inicio'}
               style={{

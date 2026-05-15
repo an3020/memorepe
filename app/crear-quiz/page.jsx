@@ -4,6 +4,25 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
+const CONTENT_TYPES = [
+  { value: 'universitario', label: 'Universitario' },
+  { value: 'conducir',      label: 'Examen de conducir' },
+  { value: 'certificacion', label: 'Certificación profesional' },
+  { value: 'idiomas',       label: 'Idiomas' },
+  { value: 'oposiciones',   label: 'Oposiciones / Concurso público' },
+]
+
+function getLabels(type) {
+  const map = {
+    universitario: { subject: 'Materia', faculty: 'Facultad', teacher: 'Cátedra', year_course: 'Año / Curso' },
+    conducir:      { subject: 'Municipio / Distrito', faculty: 'País', teacher: 'Curso', year_course: 'Año' },
+    certificacion: { subject: 'Certificación', faculty: 'Organismo', teacheraa: 'Promoción', year_course: 'Año' },
+    idiomas:       { subject: 'Examen', faculty: 'Nivel', teacher: 'Comisión', year_course: 'Año' },
+    oposiciones:   { subject: 'Organismo', faculty: 'País', teacher: 'Convocatoria', year_course: 'Año' },
+  }
+  return map[type] || map.universitario
+}
+
 export default function CrearQuiz() {
   const router = useRouter()
   const supabase = createClient()
@@ -15,6 +34,7 @@ export default function CrearQuiz() {
     description: '',
     notes: '',
     category: '',
+    content_type: 'universitario',
     language: 'es',
     visibility: 'public',
     faculty: '',
@@ -22,6 +42,8 @@ export default function CrearQuiz() {
     teacher: '',
     year_course: '',
   })
+
+  const labels = getLabels(form.content_type)
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -48,7 +70,6 @@ export default function CrearQuiz() {
     if (!user) { router.push('/'); return }
 
     const slug = generateSlug(form.title)
-    console.log('slug generado:', slug)
 
     const { data, error: insertError } = await supabase
       .from('quizzes')
@@ -58,6 +79,7 @@ export default function CrearQuiz() {
         description: form.description,
         notes: form.notes,
         category: form.category,
+        content_type: form.content_type,
         language: form.language,
         visibility: form.visibility,
         faculty: form.faculty,
@@ -70,7 +92,6 @@ export default function CrearQuiz() {
       .single()
 
     if (insertError) {
-      console.log('ERROR SUPABASE:', insertError)
       setError('Error: ' + insertError.message)
       setLoading(false)
       return
@@ -136,6 +157,31 @@ export default function CrearQuiz() {
         )}
 
         <form onSubmit={handleSubmit}>
+
+          {/* Tipo de contenido */}
+          <div style={field}>
+            <label style={label}>Tipo de contenido *</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {CONTENT_TYPES.map(ct => (
+                <button
+                  key={ct.value}
+                  type="button"
+                  onClick={() => setForm({ ...form, content_type: ct.value })}
+                  style={{
+                    padding: '7px 14px', fontSize: '12px', border: '1px solid',
+                    borderColor: form.content_type === ct.value ? '#059669' : '#e5e7eb',
+                    borderRadius: '20px',
+                    background: form.content_type === ct.value ? '#d1fae5' : 'white',
+                    color: form.content_type === ct.value ? '#065f46' : '#6b7280',
+                    fontWeight: form.content_type === ct.value ? '500' : '400',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {ct.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
           <div style={field}>
             <label style={label}>Nombre del quiz *</label>
@@ -207,23 +253,23 @@ export default function CrearQuiz() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
             <div>
-              <label style={label}>Facultad / Departamento</label>
-              <input style={input} name="faculty" value={form.faculty} onChange={handleChange} placeholder="Ej: Facultad de Derecho" />
+              <label style={label}>{labels.faculty} (opcional)</label>
+              <input style={input} name="faculty" value={form.faculty} onChange={handleChange} />
             </div>
             <div>
-              <label style={label}>Materia</label>
-              <input style={input} name="subject" value={form.subject} onChange={handleChange} placeholder="Ej: Derecho Penal Económico" />
+              <label style={label}>{labels.subject} (opcional)</label>
+              <input style={input} name="subject" value={form.subject} onChange={handleChange} />
             </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
             <div>
-              <label style={label}>Docente (opcional)</label>
-              <input style={input} name="teacher" value={form.teacher} onChange={handleChange} placeholder="Ej: Dr. García" />
+              <label style={label}>{labels.teacher} (opcional)</label>
+              <input style={input} name="teacher" value={form.teacher} onChange={handleChange} />
             </div>
             <div>
-              <label style={label}>Año / Curso</label>
-              <input style={input} name="year_course" value={form.year_course} onChange={handleChange} placeholder="Ej: 4to año, 2025" />
+              <label style={label}>{labels.year_course} (opcional)</label>
+              <input style={input} name="year_course" value={form.year_course} onChange={handleChange} />
             </div>
           </div>
 

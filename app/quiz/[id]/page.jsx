@@ -1,6 +1,17 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
+function getLabels(type) {
+  const map = {
+    universitario: { subject: 'Materia', faculty: 'Facultad', teacher: 'Cátedra', year_course: 'Año / Curso' },
+    conducir:      { subject: 'Municipio / Distrito', faculty: 'País', teacher: 'Curso', year_course: 'Año' },
+    certificacion: { subject: 'Certificación', faculty: 'Organismo', teacher: 'Promoción', year_course: 'Año' },
+    idiomas:       { subject: 'Examen', faculty: 'Nivel', teacher: 'Comisión', year_course: 'Año' },
+    oposiciones:   { subject: 'Organismo', faculty: 'País', teacher: 'Convocatoria', year_course: 'Año' },
+  }
+  return map[type] || map.universitario
+}
+
 export async function generateMetadata({ params }) {
   const { id } = await params
   const cookieStore = await cookies()
@@ -20,7 +31,7 @@ export async function generateMetadata({ params }) {
 
   const { data: quiz } = await supabase
     .from('quizzes')
-    .select('title, description, notes, subject, faculty, question_count, users(username)')
+    .select('title, description, subject, faculty, question_count, users(username)')
     .eq('id', id)
     .single()
 
@@ -95,18 +106,18 @@ export default async function QuizPublico({ params }) {
   const catStyle = catColors[quiz.category] || catColors.otro
   const username = quiz.users?.username
   const pageUrl = 'https://memorepe.com/quiz/' + id
+  const labels = getLabels(quiz.content_type)
 
   const metaItems = [
-    quiz.subject     && { label: 'Materia',     value: quiz.subject },
-    quiz.faculty     && { label: 'Facultad',     value: quiz.faculty },
-    quiz.teacher     && { label: 'Profesor',     value: quiz.teacher },
-    quiz.year_course && { label: 'Año / Curso',  value: quiz.year_course },
-    username         && { label: 'Autor',        value: '@' + username, href: '/usuario/' + username },
+    quiz.subject     && { label: labels.subject,     value: quiz.subject },
+    quiz.faculty     && { label: labels.faculty,     value: quiz.faculty },
+    quiz.teacher     && { label: labels.teacher,     value: quiz.teacher },
+    quiz.year_course && { label: labels.year_course, value: quiz.year_course },
+    username         && { label: 'Autor',            value: '@' + username, href: '/usuario/' + username },
     { label: 'Preguntas',  value: quiz.question_count },
     { label: 'Estudiando', value: quiz.student_count || 0 },
   ].filter(Boolean)
 
-  // JSON-LD schemas
   const quizSchema = {
     '@context': 'https://schema.org',
     '@type': 'Quiz',
@@ -116,18 +127,8 @@ export default async function QuizPublico({ params }) {
     'numberOfQuestions': quiz.question_count,
     ...(quiz.subject && { 'about': { '@type': 'Thing', 'name': quiz.subject } }),
     ...(quiz.faculty && { 'educationalAlignment': { '@type': 'AlignmentObject', 'targetName': quiz.faculty } }),
-    'provider': {
-      '@type': 'Organization',
-      'name': 'Memorepe',
-      'url': 'https://memorepe.com',
-    },
-    ...(username && {
-      'author': {
-        '@type': 'Person',
-        'name': '@' + username,
-        'url': 'https://memorepe.com/usuario/' + username,
-      }
-    }),
+    'provider': { '@type': 'Organization', 'name': 'Memorepe', 'url': 'https://memorepe.com' },
+    ...(username && { 'author': { '@type': 'Person', 'name': '@' + username, 'url': 'https://memorepe.com/usuario/' + username } }),
   }
 
   const breadcrumbSchema = {
@@ -143,15 +144,8 @@ export default async function QuizPublico({ params }) {
   return (
     <div style={{ minHeight: '100vh', background: 'white', fontFamily: 'Arial, sans-serif' }}>
 
-      {/* JSON-LD */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(quizSchema) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(quizSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
 
       <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 24px', borderBottom: '1px solid #f0f0f0' }}>
         <a href="/" style={{ fontSize: '18px', fontWeight: '500', letterSpacing: '-0.5px', textDecoration: 'none', color: '#111' }}>
@@ -167,19 +161,16 @@ export default async function QuizPublico({ params }) {
 
       <div style={{ maxWidth: '680px', margin: '0 auto', padding: '48px 24px' }}>
 
-        {/* Categoría */}
         <div style={{ marginBottom: '12px' }}>
           <span style={{ fontSize: '11px', fontWeight: '500', padding: '2px 8px', borderRadius: '6px', background: catStyle.bg, color: catStyle.color }}>
             {quiz.category || 'Otro'}
           </span>
         </div>
 
-        {/* Título */}
         <h1 style={{ fontSize: '32px', fontWeight: '500', color: '#111', lineHeight: '1.2', marginBottom: '24px', letterSpacing: '-0.5px' }}>
           {quiz.title}
         </h1>
 
-        {/* Tabla de metadata */}
         <div style={{ border: '1px solid #e5e7eb', borderRadius: '12px', overflow: 'hidden', marginBottom: '24px' }}>
           {metaItems.map(({ label, value, href }, i) => (
             <div key={label} style={{
@@ -197,14 +188,12 @@ export default async function QuizPublico({ params }) {
           ))}
         </div>
 
-        {/* Descripción */}
         {quiz.description && (
           <p style={{ fontSize: '15px', color: '#374151', lineHeight: '1.7', marginBottom: '16px' }}>
             {quiz.description}
           </p>
         )}
 
-        {/* Notas */}
         {quiz.notes && (
           <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '14px 16px', marginBottom: '24px', fontSize: '14px', color: '#78350f', lineHeight: '1.5' }}>
             <p style={{ fontSize: '11px', fontWeight: '600', color: '#92400e', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -214,7 +203,6 @@ export default async function QuizPublico({ params }) {
           </div>
         )}
 
-        {/* CTA */}
         <div style={{ background: '#f0fdf4', border: '1px solid #6ee7b7', borderRadius: '16px', padding: '28px', marginBottom: '40px', textAlign: 'center' }}>
           <div style={{ fontSize: '32px', marginBottom: '12px' }}>🎯</div>
           <h2 style={{ fontSize: '18px', fontWeight: '500', color: '#065f46', marginBottom: '8px' }}>
@@ -234,7 +222,6 @@ export default async function QuizPublico({ params }) {
           </p>
         </div>
 
-        {/* Vista previa preguntas */}
         {questions && questions.length > 0 && (
           <div style={{ marginBottom: '40px' }}>
             <h2 style={{ fontSize: '18px', fontWeight: '500', color: '#111', marginBottom: '6px' }}>
@@ -247,24 +234,19 @@ export default async function QuizPublico({ params }) {
               {questions.map((q, idx) => (
                 <div key={q.id} style={{ border: '1px solid #e5e7eb', borderRadius: '10px', padding: '16px' }}>
                   <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '6px', display: 'flex', gap: '8px' }}>
-                    <span>{idx + 1}</span>
-                    <span>·</span>
+                    <span>{idx + 1}</span><span>·</span>
                     <span>{q.type === 'single' ? 'Una correcta' : 'Múltiple correcta'}</span>
                   </div>
                   <div style={{ fontSize: '14px', color: '#111', lineHeight: '1.5' }}>{q.body}</div>
                 </div>
               ))}
             </div>
-
             {quiz.question_count > 15 && (
               <div style={{ marginTop: '16px', border: '1px dashed #e5e7eb', borderRadius: '10px', padding: '20px', textAlign: 'center' }}>
                 <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '12px' }}>
                   + {quiz.question_count - 15} preguntas más disponibles
                 </p>
-                <a
-                  href={'/estudiar/' + id + '/inicio'}
-                  style={{ fontSize: '13px', fontWeight: '500', color: '#059669', textDecoration: 'none' }}
-                >
+                <a href={'/estudiar/' + id + '/inicio'} style={{ fontSize: '13px', fontWeight: '500', color: '#059669', textDecoration: 'none' }}>
                   Estudiar todas las preguntas gratis →
                 </a>
               </div>
@@ -272,7 +254,6 @@ export default async function QuizPublico({ params }) {
           </div>
         )}
 
-        {/* Qué es Memorepe */}
         <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '32px', marginBottom: '32px' }}>
           <h2 style={{ fontSize: '18px', fontWeight: '500', color: '#111', marginBottom: '12px' }}>
             ¿Qué es Memorepe?
@@ -281,12 +262,8 @@ export default async function QuizPublico({ params }) {
             Memorepe es una plataforma de estudio gratuita basada en repetición espaciada — el método científicamente probado para aprender más en menos tiempo. El algoritmo SM-2 calcula cuándo necesitás repasar cada pregunta para no olvidarla, y el planificador de exámenes te dice exactamente cuánto estudiar cada día para llegar preparado.
           </p>
           <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-            <a href="/explorar" style={{ fontSize: '13px', color: '#059669', textDecoration: 'none', fontWeight: '500' }}>
-              Explorar más quizzes →
-            </a>
-            <a href="/" style={{ fontSize: '13px', color: '#6b7280', textDecoration: 'none' }}>
-              Conocer Memorepe →
-            </a>
+            <a href="/explorar" style={{ fontSize: '13px', color: '#059669', textDecoration: 'none', fontWeight: '500' }}>Explorar más quizzes →</a>
+            <a href="/" style={{ fontSize: '13px', color: '#6b7280', textDecoration: 'none' }}>Conocer Memorepe →</a>
           </div>
         </div>
 
