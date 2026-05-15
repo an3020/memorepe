@@ -11,6 +11,264 @@ const FACTOR_SEGURIDAD = 1.3
 const DIAS_LABELS = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
 const TIEMPOS = [15, 30, 45, 60, 90]
 
+const inputStyle = {
+  width: '100%',
+  padding: '8px 12px',
+  fontSize: '13px',
+  border: '1px solid #e5e7eb',
+  borderRadius: '8px',
+  background: 'white',
+  color: '#111',
+  fontFamily: 'Arial, sans-serif',
+  boxSizing: 'border-box',
+}
+
+// ─── ExamForm fuera del componente principal ───────────────────────────────
+function ExamForm({
+  form, setForm, saving, warning, setWarning,
+  allAvailableQuizzes, searchQ, setSearchQ,
+  searchResults, searching, searchQuizzes,
+  onSave, onCancel, isEdit,
+  toggleDia, toggleQuiz, setMsg,
+}) {
+  return (
+    <div style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px', marginBottom: '16px' }}>
+      <div style={{ fontSize: '14px', fontWeight: '500', color: '#111', marginBottom: '16px' }}>
+        {isEdit ? 'Editar examen' : 'Nuevo examen'}
+      </div>
+
+      <div style={{ marginBottom: '12px' }}>
+        <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Nombre del examen *</label>
+        <input
+          style={inputStyle}
+          placeholder="Ej: Penal Económico — Junio 2026"
+          value={form.title}
+          onChange={e => setForm(prev => ({ ...prev, title: e.target.value }))}
+        />
+      </div>
+
+      <div style={{ marginBottom: '16px' }}>
+        <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Fecha del examen *</label>
+        <input
+          style={inputStyle}
+          type="date"
+          value={form.exam_date}
+          onChange={e => setForm(prev => ({ ...prev, exam_date: e.target.value }))}
+        />
+      </div>
+
+      <div style={{ marginBottom: '16px' }}>
+        <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '8px' }}>¿Qué días vas a estudiar?</label>
+        <div style={{ display: 'flex', gap: '6px' }}>
+          {DIAS_LABELS.map((dia, idx) => (
+            <button
+              key={idx}
+              onClick={() => toggleDia(idx)}
+              style={{
+                flex: 1, padding: '8px 4px', fontSize: '12px', fontWeight: '500',
+                border: '1px solid',
+                borderColor: form.dias.includes(idx) ? '#059669' : '#e5e7eb',
+                borderRadius: '8px',
+                background: form.dias.includes(idx) ? '#d1fae5' : 'white',
+                color: form.dias.includes(idx) ? '#065f46' : '#9ca3af',
+                cursor: 'pointer',
+              }}
+            >
+              {dia}
+            </button>
+          ))}
+        </div>
+        <p style={{ fontSize: '11px', color: '#9ca3af', marginTop: '6px' }}>
+          {form.dias.length} día{form.dias.length !== 1 ? 's' : ''} por semana
+        </p>
+      </div>
+
+      <div style={{ marginBottom: '16px' }}>
+        <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '8px' }}>¿Cuánto tiempo por sesión?</label>
+        <div style={{ display: 'flex', gap: '6px' }}>
+          {TIEMPOS.map(t => (
+            <button
+              key={t}
+              onClick={() => setForm(prev => ({ ...prev, minutos: t }))}
+              style={{
+                flex: 1, padding: '8px 4px', fontSize: '12px', fontWeight: '500',
+                border: '1px solid',
+                borderColor: form.minutos === t ? '#059669' : '#e5e7eb',
+                borderRadius: '8px',
+                background: form.minutos === t ? '#d1fae5' : 'white',
+                color: form.minutos === t ? '#065f46' : '#9ca3af',
+                cursor: 'pointer',
+              }}
+            >
+              {t}min
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ marginBottom: '16px' }}>
+        <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '8px' }}>
+          Sets de preguntas <span style={{ color: '#9ca3af' }}>(hasta 3 en plan gratuito)</span>
+        </label>
+        {allAvailableQuizzes.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' }}>
+            {allAvailableQuizzes.map(quiz => {
+              const selected = form.selectedQuizzes.find(q => q.id === quiz.id)
+              return (
+                <div
+                  key={quiz.id}
+                  onClick={() => toggleQuiz(quiz)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '10px',
+                    padding: '10px 12px', border: '1px solid',
+                    borderColor: selected ? '#059669' : '#e5e7eb',
+                    borderRadius: '8px',
+                    background: selected ? '#f0fdf4' : 'white',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <div style={{
+                    width: '16px', height: '16px', borderRadius: '4px', border: '2px solid',
+                    borderColor: selected ? '#059669' : '#d1d5db',
+                    background: selected ? '#059669' : 'white', flexShrink: 0,
+                  }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '13px', color: '#111', fontWeight: selected ? '500' : '400' }}>{quiz.title}</div>
+                    <div style={{ fontSize: '11px', color: '#9ca3af' }}>
+                      {quiz.question_count} preguntas{quiz.subject ? ' · ' + quiz.subject : ''}
+                    </div>
+                  </div>
+                  <span style={{
+                    fontSize: '10px', padding: '2px 6px', borderRadius: '4px',
+                    background: quiz.tag === 'Mio' ? '#e0f2fe' : '#fef3c7',
+                    color: quiz.tag === 'Mio' ? '#0369a1' : '#92400e',
+                  }}>
+                    {quiz.tag}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+        <input
+          style={inputStyle}
+          placeholder="Buscar sets públicos..."
+          value={searchQ}
+          onChange={e => { setSearchQ(e.target.value); searchQuizzes(e.target.value) }}
+        />
+        {searching && <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '6px' }}>Buscando...</p>}
+        {searchResults.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
+            {searchResults.filter(r => !allAvailableQuizzes.find(a => a.id === r.id)).map(quiz => {
+              const selected = form.selectedQuizzes.find(q => q.id === quiz.id)
+              return (
+                <div
+                  key={quiz.id}
+                  onClick={() => toggleQuiz(quiz)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '10px',
+                    padding: '10px 12px', border: '1px solid',
+                    borderColor: selected ? '#059669' : '#e5e7eb',
+                    borderRadius: '8px',
+                    background: selected ? '#f0fdf4' : 'white',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <div style={{
+                    width: '16px', height: '16px', borderRadius: '4px', border: '2px solid',
+                    borderColor: selected ? '#059669' : '#d1d5db',
+                    background: selected ? '#059669' : 'white', flexShrink: 0,
+                  }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '13px', color: '#111' }}>{quiz.title}</div>
+                    <div style={{ fontSize: '11px', color: '#9ca3af' }}>
+                      {quiz.question_count} preguntas{quiz.subject ? ' · ' + quiz.subject : ''}
+                    </div>
+                  </div>
+                  <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: '#f3f4f6', color: '#374151' }}>
+                    Público
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+        {allAvailableQuizzes.length === 0 && searchResults.length === 0 && !searching && (
+          <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '6px' }}>
+            No tienes sets propios ni favoritos.{' '}
+            <a href="/explorar" style={{ color: '#059669' }}>Explora quizzes públicos</a> y guárdalos como favoritos.
+          </p>
+        )}
+      </div>
+
+      {warning && (
+        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '14px 16px', marginBottom: '16px' }}>
+          <div style={{ fontSize: '13px', fontWeight: '500', color: '#b91c1c', marginBottom: '6px' }}>
+            ⚠️ Con tu configuración actual no vas a llegar a cubrir todo el material.
+          </div>
+          <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '10px' }}>
+            Te sugerimos estudiar al menos <strong>{warning.diasSugeridos} días por semana</strong> con sesiones de <strong>{warning.tiempoSugerido} minutos</strong>.
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={() => {
+                setForm(prev => ({ ...prev, dias: Array.from({ length: warning.diasSugeridos }, (_, i) => i), minutos: warning.tiempoSugerido }))
+                setWarning(null)
+              }}
+              style={{ flex: 1, padding: '8px', fontSize: '12px', fontWeight: '500', color: 'white', background: '#059669', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+            >
+              Usar configuración sugerida
+            </button>
+            <button
+              onClick={() => onSave(true)}
+              style={{ flex: 1, padding: '8px', fontSize: '12px', color: '#6b7280', background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', cursor: 'pointer' }}
+            >
+              Continuar igual
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div style={{ background: '#f0fdf4', border: '1px solid #6ee7b7', borderRadius: '10px', padding: '14px 16px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <span style={{ fontSize: '20px' }}>📧</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '13px', fontWeight: '500', color: '#065f46', marginBottom: '2px' }}>Recordatorio semanal</div>
+          <div style={{ fontSize: '11px', color: '#059669' }}>Cada lunes te mandamos qué estudiar esa semana para llegar al examen.</div>
+        </div>
+        <input
+          type="checkbox"
+          checked={form.weekly_reminder}
+          onChange={e => setForm(prev => ({ ...prev, weekly_reminder: e.target.checked }))}
+          style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+        />
+      </div>
+
+      {!warning && (
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => onSave(false)}
+            disabled={saving || !form.title.trim() || !form.exam_date || form.dias.length === 0}
+            style={{
+              flex: 1, padding: '10px', fontSize: '13px', fontWeight: '500', color: 'white',
+              background: saving || !form.title.trim() || !form.exam_date || form.dias.length === 0 ? '#9ca3af' : '#059669',
+              border: 'none', borderRadius: '8px', cursor: 'pointer',
+            }}
+          >
+            {saving ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Crear plan de estudio'}
+          </button>
+          <button
+            onClick={onCancel}
+            style={{ padding: '10px 16px', fontSize: '13px', color: '#6b7280', background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', cursor: 'pointer' }}
+          >
+            Cancelar
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Componente principal ──────────────────────────────────────────────────
 export default function Planificador() {
   const router = useRouter()
   const supabase = createClient()
@@ -208,131 +466,16 @@ export default function Planificador() {
     setExams(prev => prev.filter(e => e.id !== examId))
   }
 
-  const input = { width: '100%', padding: '8px 12px', fontSize: '13px', border: '1px solid #e5e7eb', borderRadius: '8px', background: 'white', color: '#111', fontFamily: 'Arial, sans-serif', boxSizing: 'border-box' }
   const allAvailableQuizzes = [
     ...myQuizzes.map(q => ({ ...q, tag: 'Mio' })),
     ...favoriteQuizzes.filter(f => !myQuizzes.find(m => m.id === f.id)).map(q => ({ ...q, tag: 'Favorito' })),
   ]
 
-  function ExamForm({ onSave, onCancel, isEdit }) {
-    return (
-      <div style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px', marginBottom: '16px' }}>
-        <div style={{ fontSize: '14px', fontWeight: '500', color: '#111', marginBottom: '16px' }}>{isEdit ? 'Editar examen' : 'Nuevo examen'}</div>
-
-        <div style={{ marginBottom: '12px' }}>
-          <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Nombre del examen *</label>
-          <input style={input} placeholder="Ej: Penal Económico — Junio 2026" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} />
-        </div>
-
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Fecha del examen *</label>
-          <input style={input} type="date" value={form.exam_date} onChange={e => setForm({ ...form, exam_date: e.target.value })} />
-        </div>
-
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '8px' }}>¿Qué días vas a estudiar?</label>
-          <div style={{ display: 'flex', gap: '6px' }}>
-            {DIAS_LABELS.map((dia, idx) => (
-              <button key={idx} onClick={() => toggleDia(idx)} style={{ flex: 1, padding: '8px 4px', fontSize: '12px', fontWeight: '500', border: '1px solid', borderColor: form.dias.includes(idx) ? '#059669' : '#e5e7eb', borderRadius: '8px', background: form.dias.includes(idx) ? '#d1fae5' : 'white', color: form.dias.includes(idx) ? '#065f46' : '#9ca3af', cursor: 'pointer' }}>
-                {dia}
-              </button>
-            ))}
-          </div>
-          <p style={{ fontSize: '11px', color: '#9ca3af', marginTop: '6px' }}>{form.dias.length} día{form.dias.length !== 1 ? 's' : ''} por semana</p>
-        </div>
-
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '8px' }}>¿Cuánto tiempo por sesión?</label>
-          <div style={{ display: 'flex', gap: '6px' }}>
-            {TIEMPOS.map(t => (
-              <button key={t} onClick={() => setForm({ ...form, minutos: t })} style={{ flex: 1, padding: '8px 4px', fontSize: '12px', fontWeight: '500', border: '1px solid', borderColor: form.minutos === t ? '#059669' : '#e5e7eb', borderRadius: '8px', background: form.minutos === t ? '#d1fae5' : 'white', color: form.minutos === t ? '#065f46' : '#9ca3af', cursor: 'pointer' }}>
-                {t}min
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '8px' }}>Sets de preguntas <span style={{ color: '#9ca3af' }}>(hasta 3 en plan gratuito)</span></label>
-          {allAvailableQuizzes.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' }}>
-              {allAvailableQuizzes.map(quiz => {
-                const selected = form.selectedQuizzes.find(q => q.id === quiz.id)
-                return (
-                  <div key={quiz.id} onClick={() => toggleQuiz(quiz)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', border: '1px solid', borderColor: selected ? '#059669' : '#e5e7eb', borderRadius: '8px', background: selected ? '#f0fdf4' : 'white', cursor: 'pointer' }}>
-                    <div style={{ width: '16px', height: '16px', borderRadius: '4px', border: '2px solid', borderColor: selected ? '#059669' : '#d1d5db', background: selected ? '#059669' : 'white', flexShrink: 0 }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '13px', color: '#111', fontWeight: selected ? '500' : '400' }}>{quiz.title}</div>
-                      <div style={{ fontSize: '11px', color: '#9ca3af' }}>{quiz.question_count} preguntas{quiz.subject ? ' · ' + quiz.subject : ''}</div>
-                    </div>
-                    <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: quiz.tag === 'Mio' ? '#e0f2fe' : '#fef3c7', color: quiz.tag === 'Mio' ? '#0369a1' : '#92400e' }}>{quiz.tag}</span>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-          <input style={input} placeholder="Buscar sets públicos..." value={searchQ} onChange={e => { setSearchQ(e.target.value); searchQuizzes(e.target.value) }} />
-          {searching && <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '6px' }}>Buscando...</p>}
-          {searchResults.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
-              {searchResults.filter(r => !allAvailableQuizzes.find(a => a.id === r.id)).map(quiz => {
-                const selected = form.selectedQuizzes.find(q => q.id === quiz.id)
-                return (
-                  <div key={quiz.id} onClick={() => toggleQuiz(quiz)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', border: '1px solid', borderColor: selected ? '#059669' : '#e5e7eb', borderRadius: '8px', background: selected ? '#f0fdf4' : 'white', cursor: 'pointer' }}>
-                    <div style={{ width: '16px', height: '16px', borderRadius: '4px', border: '2px solid', borderColor: selected ? '#059669' : '#d1d5db', background: selected ? '#059669' : 'white', flexShrink: 0 }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '13px', color: '#111' }}>{quiz.title}</div>
-                      <div style={{ fontSize: '11px', color: '#9ca3af' }}>{quiz.question_count} preguntas{quiz.subject ? ' · ' + quiz.subject : ''}</div>
-                    </div>
-                    <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: '#f3f4f6', color: '#374151' }}>Público</span>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-          {allAvailableQuizzes.length === 0 && searchResults.length === 0 && !searching && (
-            <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '6px' }}>No tienes sets propios ni favoritos. <a href="/explorar" style={{ color: '#059669' }}>Explora quizzes públicos</a> y guárdalos como favoritos.</p>
-          )}
-        </div>
-
-        {warning && (
-          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '14px 16px', marginBottom: '16px' }}>
-            <div style={{ fontSize: '13px', fontWeight: '500', color: '#b91c1c', marginBottom: '6px' }}>⚠️ Con tu configuración actual no vas a llegar a cubrir todo el material.</div>
-            <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '10px' }}>
-              Te sugerimos estudiar al menos <strong>{warning.diasSugeridos} días por semana</strong> con sesiones de <strong>{warning.tiempoSugerido} minutos</strong>. Esto incluye un margen para los días que no puedas estudiar.
-            </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => { setForm(prev => ({ ...prev, dias: Array.from({ length: warning.diasSugeridos }, (_, i) => i), minutos: warning.tiempoSugerido })); setWarning(null) }} style={{ flex: 1, padding: '8px', fontSize: '12px', fontWeight: '500', color: 'white', background: '#059669', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
-                Usar configuración sugerida
-              </button>
-              <button onClick={() => onSave(true)} style={{ flex: 1, padding: '8px', fontSize: '12px', color: '#6b7280', background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', cursor: 'pointer' }}>
-                Continuar igual
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div style={{ background: '#f0fdf4', border: '1px solid #6ee7b7', borderRadius: '10px', padding: '14px 16px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '20px' }}>📧</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '13px', fontWeight: '500', color: '#065f46', marginBottom: '2px' }}>Recordatorio semanal</div>
-            <div style={{ fontSize: '11px', color: '#059669' }}>Cada lunes te mandamos qué estudiar esa semana para llegar al examen.</div>
-          </div>
-          <input type="checkbox" checked={form.weekly_reminder} onChange={e => setForm({ ...form, weekly_reminder: e.target.checked })} style={{ width: '18px', height: '18px', cursor: 'pointer' }} />
-        </div>
-
-        {!warning && (
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={() => onSave(false)} disabled={saving || !form.title.trim() || !form.exam_date || form.dias.length === 0} style={{ flex: 1, padding: '10px', fontSize: '13px', fontWeight: '500', color: 'white', background: saving || !form.title.trim() || !form.exam_date || form.dias.length === 0 ? '#9ca3af' : '#059669', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
-              {saving ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Crear plan de estudio'}
-            </button>
-            <button onClick={onCancel} style={{ padding: '10px 16px', fontSize: '13px', color: '#6b7280', background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', cursor: 'pointer' }}>
-              Cancelar
-            </button>
-          </div>
-        )}
-      </div>
-    )
+  const formProps = {
+    form, setForm, saving, warning, setWarning,
+    allAvailableQuizzes, searchQ, setSearchQ,
+    searchResults, searching, searchQuizzes,
+    toggleDia, toggleQuiz, setMsg,
   }
 
   if (loading) return <div style={{ padding: '40px', fontFamily: 'Arial' }}>Cargando...</div>
@@ -379,7 +522,10 @@ export default function Planificador() {
             <p style={{ fontSize: '13px', color: '#9ca3af' }}>Organiza tu estudio y llega preparado al examen.</p>
           </div>
           {!showForm && !editingExamId && (
-            <button onClick={() => setShowForm(true)} style={{ padding: '8px 16px', fontSize: '13px', fontWeight: '500', color: 'white', background: '#059669', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
+            <button
+              onClick={() => setShowForm(true)}
+              style={{ padding: '8px 16px', fontSize: '13px', fontWeight: '500', color: 'white', background: '#059669', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+            >
               + Nuevo examen
             </button>
           )}
@@ -391,13 +537,23 @@ export default function Planificador() {
           </div>
         )}
 
-        {showForm && <ExamForm onSave={(force) => saveExam(force)} onCancel={() => { setShowForm(false); setForm(emptyForm); setWarning(null) }} isEdit={false} />}
+        {showForm && (
+          <ExamForm
+            {...formProps}
+            onSave={(force) => saveExam(force)}
+            onCancel={() => { setShowForm(false); setForm(emptyForm); setWarning(null) }}
+            isEdit={false}
+          />
+        )}
 
         {exams.length === 0 && !showForm && (
           <div style={{ border: '1px dashed #e5e7eb', borderRadius: '12px', padding: '60px 24px', textAlign: 'center' }}>
             <p style={{ fontSize: '16px', fontWeight: '500', color: '#111', marginBottom: '8px' }}>No tienes exámenes planificados</p>
             <p style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '20px' }}>Crea tu primer plan y Memorepe te dice cuánto estudiar cada día para llegar preparado.</p>
-            <button onClick={() => setShowForm(true)} style={{ padding: '10px 20px', fontSize: '13px', fontWeight: '500', color: 'white', background: '#059669', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
+            <button
+              onClick={() => setShowForm(true)}
+              style={{ padding: '10px 20px', fontSize: '13px', fontWeight: '500', color: 'white', background: '#059669', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+            >
               Crear mi primer plan
             </button>
           </div>
@@ -405,7 +561,15 @@ export default function Planificador() {
 
         {exams.map(exam => {
           if (editingExamId === exam.id) {
-            return <ExamForm key={exam.id} onSave={(force) => updateExam(exam.id, force)} onCancel={cancelEdit} isEdit={true} />
+            return (
+              <ExamForm
+                key={exam.id}
+                {...formProps}
+                onSave={(force) => updateExam(exam.id, force)}
+                onCancel={cancelEdit}
+                isEdit={true}
+              />
+            )
           }
           return (
             <ExamCard
@@ -419,7 +583,9 @@ export default function Planificador() {
 
         {archivedExams.length > 0 && (
           <div style={{ marginTop: '32px' }}>
-            <div style={{ fontSize: '13px', fontWeight: '500', color: '#9ca3af', marginBottom: '12px' }}>Exámenes pasados ({archivedExams.length})</div>
+            <div style={{ fontSize: '13px', fontWeight: '500', color: '#9ca3af', marginBottom: '12px' }}>
+              Exámenes pasados ({archivedExams.length})
+            </div>
             {archivedExams.map(exam => (
               <div key={exam.id} style={{ border: '1px solid #f0f0f0', borderRadius: '12px', padding: '16px', marginBottom: '10px', opacity: 0.6 }}>
                 <div style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', marginBottom: '4px' }}>{exam.title}</div>
