@@ -100,19 +100,77 @@ function EmotionalBanner({ state, phase, studiedToday, questionsPerDay, daysLeft
   )
 }
 
+// Selector de banco cuando hay más de uno
+function QuizSelector({ quizzes, questionsPerDay, phase }) {
+  const [open, setOpen] = useState(false)
+  const label = phase === 'review' ? 'Repasar ahora' : 'Estudiar ahora'
+
+  if (quizzes.length === 0) return null
+
+  if (quizzes.length === 1) {
+    return (
+      <a
+        href={'/estudiar/' + quizzes[0].quiz_id + '?n=' + questionsPerDay}
+        style={{ fontSize: '12px', fontWeight: '500', color: 'white', background: '#059669', padding: '8px 14px', borderRadius: '8px', textDecoration: 'none', flexShrink: 0 }}
+      >
+        {label}
+      </a>
+    )
+  }
+
+  return (
+    <div style={{ position: 'relative', flexShrink: 0 }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{ fontSize: '12px', fontWeight: '500', color: 'white', background: '#059669', padding: '8px 14px', borderRadius: '8px', border: 'none', cursor: 'pointer' }}
+      >
+        {label} ▾
+      </button>
+      {open && (
+        <div style={{ position: 'absolute', right: 0, top: '110%', background: 'white', border: '1px solid #e5e7eb', borderRadius: '10px', boxShadow: '0 4px 16px rgba(0,0,0,0.10)', zIndex: 20, minWidth: '220px', padding: '6px' }}>
+          {quizzes.map(q => (
+            <a
+              key={q.quiz_id}
+              href={'/estudiar/' + q.quiz_id + '?n=' + Math.ceil(questionsPerDay / quizzes.length)}
+              style={{ display: 'block', padding: '9px 12px', fontSize: '12px', color: '#111', textDecoration: 'none', borderRadius: '7px' }}
+              onMouseEnter={e => e.currentTarget.style.background = '#f0fdf4'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <span style={{ fontWeight: '500' }}>{q.title}</span>
+              {q.question_count && (
+                <span style={{ color: '#9ca3af', marginLeft: '6px' }}>{q.question_count} pregs</span>
+              )}
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function ExamCard({ exam, onEdit, onDelete }) {
   const p = exam.plan
   const mc = p ? modeColor(p.recommended_mode) : { bg: '#f3f4f6', color: '#374151' }
 
+  // exam_quizzes ahora trae { quiz_id, title, question_count }
+  const quizzes = exam.exam_quizzes || []
+  const totalPreguntas = quizzes.reduce((sum, q) => sum + (q.question_count || 0), 0)
+
   return (
     <div style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px', marginBottom: '16px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
         <div>
           <div style={{ fontSize: '16px', fontWeight: '500', color: '#111', marginBottom: '4px' }}>{exam.title}</div>
           <div style={{ fontSize: '12px', color: '#9ca3af' }}>
             {new Date(exam.exam_date + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })}
             {p && ' · '}
-            {p && <span style={{ color: p.days_left <= 7 ? '#ef4444' : p.days_left <= 14 ? '#d97706' : '#059669', fontWeight: '500' }}>{daysLeftText(p.days_left)}</span>}
+            {p && (
+              <span style={{ color: p.days_left <= 7 ? '#ef4444' : p.days_left <= 14 ? '#d97706' : '#059669', fontWeight: '500' }}>
+                {daysLeftText(p.days_left)}
+              </span>
+            )}
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -121,8 +179,32 @@ export default function ExamCard({ exam, onEdit, onDelete }) {
         </div>
       </div>
 
+      {/* Bancos incluidos */}
+      {quizzes.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '16px' }}>
+          {quizzes.map(q => (
+            <div
+              key={q.quiz_id}
+              style={{ display: 'flex', alignItems: 'center', gap: '5px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '4px 10px' }}
+            >
+              <span style={{ fontSize: '11px' }}>📚</span>
+              <span style={{ fontSize: '12px', color: '#374151', fontWeight: '500' }}>{q.title}</span>
+              {q.question_count > 0 && (
+                <span style={{ fontSize: '11px', color: '#9ca3af' }}>· {q.question_count} pregs</span>
+              )}
+            </div>
+          ))}
+          {totalPreguntas > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', background: '#f0fdf4', border: '1px solid #6ee7b7', borderRadius: '6px', padding: '4px 10px' }}>
+              <span style={{ fontSize: '12px', color: '#059669', fontWeight: '500' }}>{totalPreguntas} preguntas en total</span>
+            </div>
+          )}
+        </div>
+      )}
+
       {p && p.total_questions > 0 && (
         <>
+          {/* Stats 4 columnas */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginBottom: '8px' }}>
             <Tooltip text="Preguntas que respondiste al menos una vez. Es tu punto de partida — cada sesión suma.">
               <div style={{ background: '#f9fafb', borderRadius: '8px', padding: '10px', textAlign: 'center', cursor: 'help' }}>
@@ -154,6 +236,7 @@ export default function ExamCard({ exam, onEdit, onDelete }) {
             </Tooltip>
           </div>
 
+          {/* Barra de progreso */}
           <div style={{ height: '4px', background: '#f0f0f0', borderRadius: '4px', overflow: 'hidden', marginBottom: '14px' }}>
             <div style={{ height: '100%', display: 'flex', borderRadius: '4px', overflow: 'hidden' }}>
               <div style={{ width: (p.expert_pct || 0) + '%', background: '#0369a1' }} />
@@ -188,17 +271,20 @@ export default function ExamCard({ exam, onEdit, onDelete }) {
                   }
                 </div>
               </div>
-              {exam.exam_quizzes?.length > 0 && (
-                <a href={'/estudiar/' + exam.exam_quizzes[0].quiz_id + '?n=' + p.questions_per_day} style={{ fontSize: '12px', fontWeight: '500', color: 'white', background: '#059669', padding: '8px 14px', borderRadius: '8px', textDecoration: 'none', flexShrink: 0 }}>
-                  {p.phase === 'review' ? 'Repasar ahora' : 'Estudiar ahora'}
-                </a>
-              )}
+              <QuizSelector
+                quizzes={quizzes}
+                questionsPerDay={p.questions_per_day}
+                phase={p.phase}
+              />
             </div>
           )}
 
-          {p.goal_met && p.phase !== 'exam_day' && p.days_left > 0 && exam.exam_quizzes?.length > 0 && (
+          {p.goal_met && p.phase !== 'exam_day' && p.days_left > 0 && quizzes.length > 0 && (
             <div style={{ textAlign: 'center', marginTop: '8px' }}>
-              <a href={'/estudiar/' + exam.exam_quizzes[0].quiz_id + '?n=' + p.questions_per_day} style={{ fontSize: '12px', color: '#059669', textDecoration: 'none' }}>
+              <a
+                href={'/estudiar/' + quizzes[0].quiz_id + '?n=' + p.questions_per_day}
+                style={{ fontSize: '12px', color: '#059669', textDecoration: 'none' }}
+              >
                 Adelantar sesión →
               </a>
             </div>
@@ -208,7 +294,10 @@ export default function ExamCard({ exam, onEdit, onDelete }) {
 
       {p && p.total_questions === 0 && (
         <div style={{ background: '#f9fafb', borderRadius: '8px', padding: '14px', textAlign: 'center', fontSize: '13px', color: '#9ca3af' }}>
-          No hay sets de preguntas asociados. Haz clic en Editar para agregar.
+          No hay bancos de preguntas asociados.{' '}
+          <button onClick={onEdit} style={{ color: '#059669', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', padding: 0 }}>
+            Hacer clic en Editar para agregar.
+          </button>
         </div>
       )}
     </div>

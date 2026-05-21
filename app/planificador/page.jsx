@@ -27,9 +27,9 @@ const inputStyle = {
 // ─── QuizPickerCard ────────────────────────────────────────────────────────
 function QuizPickerCard({ quiz, selected, onToggle }) {
   const username = quiz.users?.username || quiz.username
-
   return (
     <div
+      onClick={onToggle}
       style={{
         border: '1px solid',
         borderColor: selected ? '#059669' : '#e5e7eb',
@@ -42,56 +42,39 @@ function QuizPickerCard({ quiz, selected, onToggle }) {
         gap: '6px',
       }}
     >
-      {/* Header: título + checkbox */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
-        <div
-          onClick={onToggle}
-          style={{ flex: 1, fontSize: '13px', fontWeight: '500', color: '#111', lineHeight: '1.3' }}
-        >
+        <div style={{ flex: 1, fontSize: '13px', fontWeight: '500', color: '#111', lineHeight: '1.3' }}>
           {quiz.title}
         </div>
-        <div
-          onClick={onToggle}
-          style={{
-            width: '16px', height: '16px', borderRadius: '4px', border: '2px solid',
-            borderColor: selected ? '#059669' : '#d1d5db',
-            background: selected ? '#059669' : 'white',
-            flexShrink: 0, marginTop: '2px',
-          }}
-        />
-      </div>
-
-      {/* Descripción truncada */}
-      {quiz.description && (
         <div style={{
-          fontSize: '11px', color: '#6b7280', lineHeight: '1.5',
-          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+          width: '16px', height: '16px', borderRadius: '4px', border: '2px solid',
+          borderColor: selected ? '#059669' : '#d1d5db',
+          background: selected ? '#059669' : 'white',
+          flexShrink: 0, marginTop: '2px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
+          {selected && <span style={{ color: 'white', fontSize: '10px', lineHeight: 1 }}>✓</span>}
+        </div>
+      </div>
+      {quiz.description && (
+        <div style={{ fontSize: '11px', color: '#6b7280', lineHeight: '1.5', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
           {quiz.description}
         </div>
       )}
-
-      {/* Meta */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '11px', color: '#9ca3af' }}>{quiz.question_count} preguntas</span>
-          {username && (
-            <span style={{ fontSize: '11px', color: '#059669' }}>@{username}</span>
-          )}
-          {quiz.year_course && (
-            <span style={{ fontSize: '11px', color: '#9ca3af' }}>{quiz.year_course}</span>
-          )}
+          {username && <span style={{ fontSize: '11px', color: '#059669' }}>@{username}</span>}
           {quiz.tag && (
             <span style={{
               fontSize: '10px', padding: '1px 6px', borderRadius: '4px',
-              background: quiz.tag === 'Mio' ? '#e0f2fe' : quiz.tag === 'Favorito' ? '#fef3c7' : '#f3f4f6',
-              color: quiz.tag === 'Mio' ? '#0369a1' : quiz.tag === 'Favorito' ? '#92400e' : '#374151',
+              background: quiz.tag === 'Mío' ? '#e0f2fe' : quiz.tag === 'Favorito' ? '#fef3c7' : '#f3f4f6',
+              color: quiz.tag === 'Mío' ? '#0369a1' : quiz.tag === 'Favorito' ? '#92400e' : '#374151',
             }}>
               {quiz.tag}
             </span>
           )}
         </div>
-        {/* Botón Ver detalles */}
         <div onClick={e => e.stopPropagation()}>
           <ModalQuiz quiz={quiz} progressMap={{}} />
         </div>
@@ -108,12 +91,30 @@ function ExamForm({
   onSave, onCancel, isEdit,
   toggleDia, toggleQuiz,
 }) {
+  // Preview del plan calculado
+  const previewPlan = () => {
+    if (!form.exam_date || form.selectedQuizzes.length === 0 || form.dias.length === 0) return null
+    const total = form.selectedQuizzes.reduce((sum, q) => sum + (q.question_count || 0), 0)
+    if (total === 0) return null
+    const hoy = new Date()
+    const examen = new Date(form.exam_date + 'T12:00:00')
+    const diasTotales = Math.ceil((examen - hoy) / (1000 * 60 * 60 * 24))
+    const semanas = Math.ceil(diasTotales / 7)
+    const diasEstudio = semanas * form.dias.length
+    const preguntasPorDia = Math.ceil((total * FACTOR_SEGURIDAD) / Math.max(diasEstudio, 1))
+    return { total, diasTotales, semanas, preguntasPorDia }
+  }
+
+  const preview = previewPlan()
+  const selectedTotal = form.selectedQuizzes.reduce((s, q) => s + (q.question_count || 0), 0)
+
   return (
     <div style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px', marginBottom: '16px' }}>
       <div style={{ fontSize: '14px', fontWeight: '500', color: '#111', marginBottom: '16px' }}>
         {isEdit ? 'Editar examen' : 'Nuevo examen'}
       </div>
 
+      {/* Nombre */}
       <div style={{ marginBottom: '12px' }}>
         <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Nombre del examen *</label>
         <input
@@ -124,6 +125,7 @@ function ExamForm({
         />
       </div>
 
+      {/* Fecha */}
       <div style={{ marginBottom: '16px' }}>
         <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Fecha del examen *</label>
         <input
@@ -134,6 +136,7 @@ function ExamForm({
         />
       </div>
 
+      {/* Días */}
       <div style={{ marginBottom: '16px' }}>
         <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '8px' }}>¿Qué días vas a estudiar?</label>
         <div style={{ display: 'flex', gap: '6px' }}>
@@ -160,6 +163,7 @@ function ExamForm({
         </p>
       </div>
 
+      {/* Tiempo por sesión */}
       <div style={{ marginBottom: '20px' }}>
         <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '8px' }}>¿Cuánto tiempo por sesión?</label>
         <div style={{ display: 'flex', gap: '6px' }}>
@@ -183,7 +187,7 @@ function ExamForm({
         </div>
       </div>
 
-      {/* Recordatorio — más arriba y visible */}
+      {/* Recordatorio */}
       <div style={{ background: '#f0fdf4', border: '1px solid #6ee7b7', borderRadius: '10px', padding: '14px 16px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
         <span style={{ fontSize: '20px' }}>📧</span>
         <div style={{ flex: 1 }}>
@@ -198,64 +202,137 @@ function ExamForm({
         />
       </div>
 
-      {/* Bancos de preguntas */}
+      {/* ── Bancos de preguntas ── */}
       <div style={{ marginBottom: '16px' }}>
         <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '8px' }}>
           Bancos de preguntas <span style={{ color: '#9ca3af' }}>(hasta 3 en plan gratuito)</span>
         </label>
 
-        {/* Buscador arriba */}
-        <input
-          style={{ ...inputStyle, marginBottom: '12px' }}
-          placeholder="Buscar bancos de preguntas..."
-          value={searchQ}
-          onChange={e => { setSearchQ(e.target.value); searchQuizzes(e.target.value) }}
-        />
-
-        {searching && <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '8px' }}>Buscando...</p>}
-
-        {/* Resultados de búsqueda */}
-        {searchQ && searchResults.length > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
-            {searchResults.map(quiz => {
-              const selected = !!form.selectedQuizzes.find(q => q.id === quiz.id)
-              return (
-                <QuizPickerCard
-                  key={quiz.id}
-                  quiz={{ ...quiz, tag: 'Público' }}
-                  selected={selected}
-                  onToggle={() => toggleQuiz(quiz)}
-                />
-              )
-            })}
+        {/* Zona: bancos ya incluidos */}
+        {form.selectedQuizzes.length > 0 && (
+          <div style={{ background: '#f0fdf4', border: '1px solid #6ee7b7', borderRadius: '10px', padding: '12px 14px', marginBottom: '12px' }}>
+            <div style={{ fontSize: '11px', fontWeight: '500', color: '#065f46', marginBottom: '10px' }}>
+              ✓ Incluidos en este examen ({form.selectedQuizzes.length}/3)
+              {selectedTotal > 0 && (
+                <span style={{ fontWeight: '400', color: '#059669', marginLeft: '6px' }}>· {selectedTotal} preguntas en total</span>
+              )}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {form.selectedQuizzes.map(q => (
+                <div
+                  key={q.id}
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', border: '1px solid #6ee7b7', borderRadius: '8px', padding: '8px 12px' }}
+                >
+                  <div>
+                    <span style={{ fontSize: '13px', fontWeight: '500', color: '#111' }}>{q.title}</span>
+                    {q.question_count > 0 && (
+                      <span style={{ fontSize: '11px', color: '#9ca3af', marginLeft: '8px' }}>{q.question_count} preguntas</span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => toggleQuiz(q)}
+                    style={{ fontSize: '13px', color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}
+                    title="Quitar"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
-        {/* Lista ordenada por último estudiado */}
-        {!searchQ && sortedQuizzes.length > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-            {sortedQuizzes.map(quiz => {
-              const selected = !!form.selectedQuizzes.find(q => q.id === quiz.id)
-              return (
-                <QuizPickerCard
-                  key={quiz.id}
-                  quiz={quiz}
-                  selected={selected}
-                  onToggle={() => toggleQuiz(quiz)}
-                />
-              )
-            })}
+        {/* Preview del plan */}
+        {preview && (
+          <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px 14px', marginBottom: '12px' }}>
+            <div style={{ fontSize: '11px', fontWeight: '500', color: '#6b7280', marginBottom: '6px' }}>Vista previa del plan</div>
+            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '18px', fontWeight: '500', color: '#111' }}>{preview.preguntasPorDia}</div>
+                <div style={{ fontSize: '10px', color: '#9ca3af' }}>preguntas/día</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '18px', fontWeight: '500', color: '#111' }}>{preview.diasTotales}</div>
+                <div style={{ fontSize: '10px', color: '#9ca3af' }}>días hasta el examen</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '18px', fontWeight: '500', color: '#111' }}>{preview.semanas}</div>
+                <div style={{ fontSize: '10px', color: '#9ca3af' }}>semanas de estudio</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '18px', fontWeight: '500', color: '#111' }}>{preview.total}</div>
+                <div style={{ fontSize: '10px', color: '#9ca3af' }}>preguntas totales</div>
+              </div>
+            </div>
           </div>
         )}
 
-        {!searchQ && sortedQuizzes.length === 0 && !searching && (
-          <p style={{ fontSize: '12px', color: '#9ca3af' }}>
-            No tenés bancos propios ni favoritos.{' '}
-            <a href="/explorar" style={{ color: '#059669' }}>Explorá quizzes públicos</a> y guardalos como favoritos.
+        {/* Separador agregar */}
+        {form.selectedQuizzes.length < 3 && (
+          <>
+            <div style={{ fontSize: '11px', fontWeight: '500', color: '#9ca3af', marginBottom: '8px' }}>
+              {form.selectedQuizzes.length === 0 ? 'Seleccioná los bancos a estudiar' : '+ Agregar otro banco'}
+            </div>
+
+            {/* Buscador */}
+            <input
+              style={{ ...inputStyle, marginBottom: '10px' }}
+              placeholder="Buscar bancos de preguntas..."
+              value={searchQ}
+              onChange={e => { setSearchQ(e.target.value); searchQuizzes(e.target.value) }}
+            />
+
+            {searching && <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '8px' }}>Buscando...</p>}
+
+            {/* Resultados búsqueda */}
+            {searchQ && searchResults.length > 0 && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                {searchResults
+                  .filter(quiz => !form.selectedQuizzes.find(q => q.id === quiz.id))
+                  .map(quiz => (
+                    <QuizPickerCard
+                      key={quiz.id}
+                      quiz={{ ...quiz, tag: 'Público' }}
+                      selected={false}
+                      onToggle={() => toggleQuiz(quiz)}
+                    />
+                  ))}
+              </div>
+            )}
+
+            {/* Lista disponibles (sin búsqueda, sin los ya incluidos) */}
+            {!searchQ && sortedQuizzes.filter(q => !form.selectedQuizzes.find(s => s.id === q.id)).length > 0 && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                {sortedQuizzes
+                  .filter(q => !form.selectedQuizzes.find(s => s.id === q.id))
+                  .map(quiz => (
+                    <QuizPickerCard
+                      key={quiz.id}
+                      quiz={quiz}
+                      selected={false}
+                      onToggle={() => toggleQuiz(quiz)}
+                    />
+                  ))}
+              </div>
+            )}
+
+            {!searchQ && sortedQuizzes.filter(q => !form.selectedQuizzes.find(s => s.id === q.id)).length === 0 && form.selectedQuizzes.length === 0 && (
+              <p style={{ fontSize: '12px', color: '#9ca3af' }}>
+                No tenés bancos propios ni favoritos.{' '}
+                <a href="/explorar" style={{ color: '#059669' }}>Explorá quizzes públicos</a> y guardalos como favoritos.
+              </p>
+            )}
+          </>
+        )}
+
+        {form.selectedQuizzes.length >= 3 && (
+          <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>
+            Llegaste al límite de 3 bancos en el plan gratuito. Quitá uno para agregar otro.
           </p>
         )}
       </div>
 
+      {/* Warning */}
       {warning && (
         <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '14px 16px', marginBottom: '16px' }}>
           <div style={{ fontSize: '13px', fontWeight: '500', color: '#b91c1c', marginBottom: '6px' }}>
@@ -340,29 +417,7 @@ export default function Planificador() {
       if (!user) { router.push('/'); return }
       setUserId(user.id)
 
-      const { data: examsData } = await supabase
-        .from('exams')
-        .select('*, exam_quizzes(quiz_id)')
-        .eq('user_id', user.id)
-        .order('exam_date', { ascending: true })
-
-      const active = []
-      const archived = []
-      const today = new Date().toISOString().split('T')[0]
-
-      for (const exam of examsData || []) {
-        const { data: plan } = await supabase
-          .rpc('get_exam_plan', { p_exam_id: exam.id, p_user_id: user.id })
-        if (exam.exam_date < today) {
-          archived.push({ ...exam, plan })
-        } else {
-          active.push({ ...exam, plan })
-        }
-      }
-
-      setExams(active)
-      setArchivedExams(archived)
-
+      // ── Quizzes disponibles ──
       const { data: quizzesData } = await supabase
         .from('quizzes')
         .select('id, title, question_count, subject, description, year_course, users(username)')
@@ -376,7 +431,41 @@ export default function Planificador() {
         .eq('user_id', user.id)
       setFavoriteQuizzes(favsData?.map(f => f.quizzes).filter(Boolean) || [])
 
-      // Últimos estudiados
+      // ── Exámenes — ahora con título y question_count de los quizzes ──
+      const { data: examsData } = await supabase
+        .from('exams')
+        .select('*, exam_quizzes(quiz_id, quizzes(id, title, question_count))')
+        .eq('user_id', user.id)
+        .order('exam_date', { ascending: true })
+
+      const active = []
+      const archived = []
+      const today = new Date().toISOString().split('T')[0]
+
+      for (const exam of examsData || []) {
+        // Aplanar exam_quizzes para que cada entrada tenga quiz_id, title, question_count
+        const flatQuizzes = (exam.exam_quizzes || []).map(eq => ({
+          quiz_id: eq.quiz_id,
+          title: eq.quizzes?.title || '',
+          question_count: eq.quizzes?.question_count || 0,
+        }))
+
+        const { data: plan } = await supabase
+          .rpc('get_exam_plan', { p_exam_id: exam.id, p_user_id: user.id })
+
+        const enriched = { ...exam, exam_quizzes: flatQuizzes, plan }
+
+        if (exam.exam_date < today) {
+          archived.push(enriched)
+        } else {
+          active.push(enriched)
+        }
+      }
+
+      setExams(active)
+      setArchivedExams(archived)
+
+      // ── Últimos estudiados ──
       const { data: sessionsData } = await supabase
         .from('study_sessions')
         .select('quiz_id')
@@ -477,7 +566,14 @@ export default function Planificador() {
     }
 
     const { data: plan } = await supabase.rpc('get_exam_plan', { p_exam_id: exam.id, p_user_id: userId })
-    setExams(prev => [...prev, { ...exam, exam_quizzes: form.selectedQuizzes.map(q => ({ quiz_id: q.id })), plan }]
+
+    const flatQuizzes = form.selectedQuizzes.map(q => ({
+      quiz_id: q.id,
+      title: q.title,
+      question_count: q.question_count || 0,
+    }))
+
+    setExams(prev => [...prev, { ...exam, exam_quizzes: flatQuizzes, plan }]
       .sort((a, b) => new Date(a.exam_date) - new Date(b.exam_date)))
 
     setForm(emptyForm)
@@ -498,8 +594,15 @@ export default function Planificador() {
     }
 
     const { data: plan } = await supabase.rpc('get_exam_plan', { p_exam_id: examId, p_user_id: userId })
+
+    const flatQuizzes = form.selectedQuizzes.map(q => ({
+      quiz_id: q.id,
+      title: q.title,
+      question_count: q.question_count || 0,
+    }))
+
     setExams(prev => prev.map(e => e.id === examId
-      ? { ...e, title: form.title, exam_date: form.exam_date, weekly_email: form.weekly_reminder, exam_quizzes: form.selectedQuizzes.map(q => ({ quiz_id: q.id })), plan }
+      ? { ...e, title: form.title, exam_date: form.exam_date, weekly_email: form.weekly_reminder, exam_quizzes: flatQuizzes, plan }
       : e
     ).sort((a, b) => new Date(a.exam_date) - new Date(b.exam_date)))
 
@@ -509,10 +612,20 @@ export default function Planificador() {
   }
 
   function startEdit(exam) {
-    const quizIds = exam.exam_quizzes?.map(eq => eq.quiz_id) || []
-    const allQuizzes = [...myQuizzes, ...favoriteQuizzes]
-    const selected = quizIds.map(id => allQuizzes.find(q => q.id === id)).filter(Boolean)
-    setForm({ title: exam.title, exam_date: exam.exam_date, weekly_reminder: exam.weekly_email || false, selectedQuizzes: selected, dias: [0, 1, 2, 3, 4], minutos: 30 })
+    // Reconstruir selectedQuizzes desde exam_quizzes enriquecidos
+    const selected = (exam.exam_quizzes || []).map(eq => ({
+      id: eq.quiz_id,
+      title: eq.title,
+      question_count: eq.question_count || 0,
+    }))
+    setForm({
+      title: exam.title,
+      exam_date: exam.exam_date,
+      weekly_reminder: exam.weekly_email || false,
+      selectedQuizzes: selected,
+      dias: [0, 1, 2, 3, 4],
+      minutos: 30,
+    })
     setEditingExamId(exam.id)
     setWarning(null)
   }
@@ -524,9 +637,8 @@ export default function Planificador() {
     setExams(prev => prev.filter(e => e.id !== examId))
   }
 
-  // Ordenar quizzes: últimos estudiados primero, luego el resto
   const allAvailable = [
-    ...myQuizzes.map(q => ({ ...q, tag: 'Mio' })),
+    ...myQuizzes.map(q => ({ ...q, tag: 'Mío' })),
     ...favoriteQuizzes.filter(f => !myQuizzes.find(m => m.id === f.id)).map(q => ({ ...q, tag: 'Favorito' })),
   ]
 
@@ -655,6 +767,16 @@ export default function Planificador() {
                   {new Date(exam.exam_date + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })}
                   {exam.plan && ' · ' + exam.plan.dominated_pct + '% dominadas al finalizar'}
                 </div>
+                {/* Bancos del examen archivado */}
+                {exam.exam_quizzes?.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
+                    {exam.exam_quizzes.map(q => (
+                      <span key={q.quiz_id} style={{ fontSize: '11px', color: '#9ca3af', background: '#f9fafb', border: '1px solid #f0f0f0', borderRadius: '4px', padding: '2px 6px' }}>
+                        {q.title}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>

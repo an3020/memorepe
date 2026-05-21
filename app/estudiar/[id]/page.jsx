@@ -23,6 +23,36 @@ const MENSAJES_MOTIVADORES = [
   "Tu yo del día del examen te lo va a agradecer.",
 ]
 
+const NIVELES = [
+  { nivel: 1, nombre: 'Curioso', xp: 500 },
+  { nivel: 2, nombre: 'Estudiante', xp: 2000 },
+  { nivel: 3, nombre: 'Aplicado', xp: 5000 },
+  { nivel: 4, nombre: 'Dedicado', xp: 12000 },
+  { nivel: 5, nombre: 'Constante', xp: 25000 },
+  { nivel: 6, nombre: 'Avanzado', xp: 50000 },
+  { nivel: 7, nombre: 'Experto', xp: 90000 },
+  { nivel: 8, nombre: 'Erudito', xp: 150000 },
+  { nivel: 9, nombre: 'Académico', xp: 230000 },
+  { nivel: 10, nombre: 'Sabio', xp: 350000 },
+  { nivel: 11, nombre: 'Maestro', xp: 500000 },
+  { nivel: 12, nombre: 'Leyenda', xp: 750000 },
+]
+
+function getNivel(xpTotal) {
+  let nivelActual = NIVELES[0]
+  let nivelSiguiente = NIVELES[1]
+  for (let i = 0; i < NIVELES.length; i++) {
+    if (xpTotal >= NIVELES[i].xp) {
+      nivelActual = NIVELES[i]
+      nivelSiguiente = NIVELES[i + 1] || null
+    }
+  }
+  const xpInicio = nivelActual.xp
+  const xpFin = nivelSiguiente?.xp || nivelActual.xp
+  const pct = nivelSiguiente ? Math.round(((xpTotal - xpInicio) / (xpFin - xpInicio)) * 100) : 100
+  return { nivelActual, nivelSiguiente, pct, xpFalta: nivelSiguiente ? nivelSiguiente.xp - xpTotal : 0 }
+}
+
 function getMensaje(sessionId) {
   if (!sessionId) return MENSAJES_MOTIVADORES[0]
   const idx = sessionId.charCodeAt(0) % MENSAJES_MOTIVADORES.length
@@ -35,13 +65,10 @@ function formatFechaVuelta(dateStr) {
   const today = new Date()
   const tomorrow = new Date()
   tomorrow.setDate(today.getDate() + 1)
-
   const todayStr = today.toISOString().split('T')[0]
   const tomorrowStr = tomorrow.toISOString().split('T')[0]
-
   if (dateStr === todayStr) return 'hoy mismo'
   if (dateStr === tomorrowStr) return 'mañana'
-
   return date.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
 }
 
@@ -65,26 +92,250 @@ function buildQueue(questionsData, progressData, limite) {
   const progressMap = {}
   progressData?.forEach(p => { progressMap[p.question_id] = p })
   const today = new Date().toISOString().split('T')[0]
-
   const scored = questionsData.map(q => {
     const p = progressMap[q.id]
     const isDue = !p || p.next_review_date <= today
     const updatedToday = p?.updated_at?.substring(0, 10) === today
     const acertadaHoy = updatedToday && p?.last_quality >= 3
     const priority = !p ? 0 : acertadaHoy ? 3 : isDue ? 1 : 2
-    return {
-      ...q,
-      options: [...q.options].sort(() => Math.random() - 0.5),
-      _priority: priority,
-      _interval: p?.interval_days || 0,
-    }
+    return { ...q, options: [...q.options].sort(() => Math.random() - 0.5), _priority: priority, _interval: p?.interval_days || 0 }
   }).sort((a, b) => {
     if (a._priority !== b._priority) return a._priority - b._priority
     if (a._interval !== b._interval) return a._interval - b._interval
     return Math.random() - 0.5
   })
-
   return limite ? scored.slice(0, limite) : scored
+}
+
+// ── Pantalla de resumen (fin normal o salida anticipada) ──────────────────
+function ResumenSesion({
+  session, questions, quiz, quizId, sessionId, modoNombre,
+  nextReviewDate, hasMas, limite, remaining, continuar,
+  esAnticipado, quizProgress, userStats,
+}) {
+  const total = questions.length
+  const respondidas = session.correct + session.wrong + session.partial
+  const xpGanados = session.correct * 10 + session.partial * 4
+  const precision = respondidas > 0 ? Math.round((session.correct / respondidas) * 100) : 0
+  const mensaje = getMensaje(sessionId)
+  const fechaVuelta = formatFechaVuelta(nextReviewDate)
+
+  // Nivel
+  const xpTotal = (userStats?.xp_total || 0) + xpGanados
+  const { nivelActual, nivelSiguiente, pct, xpFalta } = getNivel(xpTotal)
+  const streak = userStats?.streak_current || 0
+
+  // Badges desbloqueados esta sesión (lógica básica)
+  const badges = []
+  if (session.correct + session.wrong + session.partial > 0 && !userStats?.had_first_session) {
+    badges.push({ icon: '⚡', nombre: 'Primera sesión', desc: 'Completaste tu primera sesión de estudio' })
+  }
+  if (streak >= 7) badges.push({ icon: '🔥', nombre: 'Racha de 7 días', desc: `Llevas ${streak} días seguidos estudiando` })
+  if (precision >= 80 && respondidas >= 10) badges.push({ icon: '🎯', nombre: 'Precisión 80%', desc: 'Alcanzaste 80% de precisión en esta sesión' })
+
+  // ¿Cumplió objetivo del planificador?
+  const objetivoCumplido = quizProgress?.due_today > 0 && respondidas >= quizProgress.due_today
+
+  return (
+    <div style={{ minHeight: '100vh', background: 'white', fontFamily: 'Arial, sans-serif' }}>
+      <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 24px', borderBottom: '1px solid #f0f0f0' }}>
+        <a href="/dashboard" style={{ fontSize: '18px', fontWeight: '500', textDecoration: 'none', color: '#111' }}>
+          memo<span style={{ color: '#059669' }}>repe</span>
+        </a>
+      </nav>
+
+      <div style={{ maxWidth: '480px', margin: '0 auto', padding: '36px 24px' }}>
+
+        {/* Título según tipo */}
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          {esAnticipado ? (
+            <>
+              <div style={{ fontSize: '28px', marginBottom: '8px' }}>💾</div>
+              <div style={{ fontSize: '16px', fontWeight: '500', color: '#111', marginBottom: '4px' }}>Sesión guardada</div>
+              <div style={{ fontSize: '13px', color: '#9ca3af' }}>
+                Completaste {respondidas} de {total} preguntas
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: '28px', marginBottom: '8px' }}>🎉</div>
+              <div style={{ fontSize: '16px', fontWeight: '500', color: '#111', marginBottom: '4px' }}>¡Sesión completada!</div>
+            </>
+          )}
+        </div>
+
+        {/* Mensaje motivador */}
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <p style={{ fontSize: '14px', color: '#374151', lineHeight: '1.6', fontStyle: 'italic', margin: 0 }}>
+            "{mensaje}"
+          </p>
+        </div>
+
+        {/* Publicidad */}
+        <div style={{ width: '100%', height: '90px', background: '#f9fafb', border: '1px dashed #e5e7eb', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
+          <span style={{ fontSize: '11px', color: '#d1d5db', letterSpacing: '0.5px' }}>PUBLICIDAD</span>
+        </div>
+
+        {/* Modo y quiz */}
+        <p style={{ fontSize: '13px', color: '#6b7280', textAlign: 'center', margin: '0 0 14px 0' }}>
+          {modoNombre} · {quiz?.title}
+        </p>
+
+        {/* Stats principales */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '8px' }}>
+          <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
+            <div style={{ fontSize: '24px', fontWeight: '500', color: '#059669' }}>{session.correct}</div>
+            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>Correctas</div>
+          </div>
+          <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
+            <div style={{ fontSize: '24px', fontWeight: '500', color: '#ef4444' }}>{session.wrong}</div>
+            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>Incorrectas</div>
+          </div>
+          <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
+            <div style={{ fontSize: '24px', fontWeight: '500', color: '#d97706' }}>{session.partial}</div>
+            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>Parciales</div>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '16px' }}>
+          <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
+            <div style={{ fontSize: '18px', fontWeight: '500', color: '#111' }}>{precision}%</div>
+            <div style={{ fontSize: '11px', color: '#9ca3af' }}>precisión</div>
+          </div>
+          <div style={{ background: '#f0fdf4', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
+            <div style={{ fontSize: '18px', fontWeight: '500', color: '#059669' }}>+{xpGanados} XP</div>
+            <div style={{ fontSize: '11px', color: '#059669' }}>ganados esta sesión</div>
+          </div>
+        </div>
+
+        {/* Progreso global del quiz */}
+        {quizProgress && quizProgress.total > 0 && (
+          <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '14px 16px', marginBottom: '12px' }}>
+            <div style={{ fontSize: '12px', fontWeight: '500', color: '#6b7280', marginBottom: '10px' }}>
+              Progreso en {quiz?.title}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '10px' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '16px', fontWeight: '500', color: '#374151' }}>{quizProgress.seen}</div>
+                <div style={{ fontSize: '10px', color: '#9ca3af' }}>de {quizProgress.total} vistas</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '16px', fontWeight: '500', color: '#059669' }}>{quizProgress.dominated}</div>
+                <div style={{ fontSize: '10px', color: '#9ca3af' }}>dominadas</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '16px', fontWeight: '500', color: '#9ca3af' }}>{quizProgress.unseen}</div>
+                <div style={{ fontSize: '10px', color: '#9ca3af' }}>sin ver</div>
+              </div>
+            </div>
+            {/* Barra de dominadas */}
+            <div style={{ height: '6px', background: '#e5e7eb', borderRadius: '4px', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: quizProgress.dominated_pct + '%', background: '#059669', borderRadius: '4px', transition: 'width 0.5s' }} />
+            </div>
+            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '6px', textAlign: 'right' }}>
+              {quizProgress.dominated_pct}% dominado
+            </div>
+          </div>
+        )}
+
+        {/* Objetivo del día */}
+        {objetivoCumplido && (
+          <div style={{ background: '#f0fdf4', border: '1px solid #6ee7b7', borderRadius: '10px', padding: '12px 16px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '18px' }}>✅</span>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: '500', color: '#065f46' }}>Objetivo del día cumplido</div>
+              <div style={{ fontSize: '11px', color: '#059669' }}>Cubriste todas las preguntas pendientes de repaso.</div>
+            </div>
+          </div>
+        )}
+
+        {/* Racha */}
+        {streak > 0 && (
+          <div style={{ background: streak >= 7 ? '#fff7ed' : '#f9fafb', border: '1px solid', borderColor: streak >= 7 ? '#fed7aa' : '#e5e7eb', borderRadius: '10px', padding: '12px 16px', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '18px' }}>🔥</span>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: '500', color: streak >= 7 ? '#c2410c' : '#374151' }}>
+                  {streak} {streak === 1 ? 'día' : 'días'} de racha
+                </div>
+                <div style={{ fontSize: '11px', color: '#9ca3af' }}>
+                  {streak >= 30 ? '¡Racha increíble!' : streak >= 7 ? '¡Racha excelente!' : 'Seguí así para mantenerla'}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Nivel y XP */}
+        <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '14px 16px', marginBottom: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <div>
+              <span style={{ fontSize: '13px', fontWeight: '500', color: '#111' }}>Nivel {nivelActual.nivel} · {nivelActual.nombre}</span>
+            </div>
+            <span style={{ fontSize: '12px', color: '#9ca3af' }}>{xpTotal.toLocaleString('es-AR')} XP</span>
+          </div>
+          <div style={{ height: '6px', background: '#e5e7eb', borderRadius: '4px', overflow: 'hidden', marginBottom: '6px' }}>
+            <div style={{ height: '100%', width: pct + '%', background: '#059669', borderRadius: '4px', transition: 'width 0.5s' }} />
+          </div>
+          {nivelSiguiente ? (
+            <div style={{ fontSize: '11px', color: '#9ca3af' }}>
+              Faltan <strong>{xpFalta.toLocaleString('es-AR')} XP</strong> para {nivelSiguiente.nombre}
+            </div>
+          ) : (
+            <div style={{ fontSize: '11px', color: '#059669' }}>¡Nivel máximo alcanzado!</div>
+          )}
+        </div>
+
+        {/* Badges desbloqueados */}
+        {badges.length > 0 && (
+          <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '14px 16px', marginBottom: '12px' }}>
+            <div style={{ fontSize: '12px', fontWeight: '500', color: '#92400e', marginBottom: '10px' }}>🏆 Logros desbloqueados</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {badges.map((b, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '20px' }}>{b.icon}</span>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: '500', color: '#111' }}>{b.nombre}</div>
+                    <div style={{ fontSize: '11px', color: '#9ca3af' }}>{b.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Cuándo volver */}
+        {fechaVuelta && (
+          <div style={{ textAlign: 'center', marginBottom: '24px', padding: '14px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px' }}>
+            <p style={{ fontSize: '13px', color: '#92400e', margin: 0 }}>
+              Volvé <strong>{fechaVuelta}</strong> para consolidar lo aprendido.
+            </p>
+          </div>
+        )}
+
+        {/* Acciones */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {!esAnticipado && hasMas && limite && (
+            <button onClick={continuar} style={{ padding: '12px', fontSize: '14px', fontWeight: '500', color: 'white', background: '#059669', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>
+              Continuar con otras {Math.min(limite, remaining.length)} preguntas
+            </button>
+          )}
+          {esAnticipado && quizProgress?.unseen > 0 && (
+            <a href={'/estudiar/' + quizId} style={{ display: 'block', padding: '12px', fontSize: '14px', fontWeight: '500', color: 'white', background: '#059669', border: 'none', borderRadius: '10px', cursor: 'pointer', textDecoration: 'none', textAlign: 'center' }}>
+              Retomar sesión
+            </a>
+          )}
+          <a href={'/estudiar/' + quizId + '/inicio'} style={{ display: 'block', padding: '12px', fontSize: '14px', color: '#374151', background: '#f3f4f6', borderRadius: '10px', textDecoration: 'none', textAlign: 'center' }}>
+            Cambiar modo de estudio
+          </a>
+          <a href="/dashboard" style={{ display: 'block', padding: '12px', fontSize: '14px', color: '#9ca3af', textDecoration: 'none', textAlign: 'center' }}>
+            Ir al dashboard
+          </a>
+        </div>
+
+      </div>
+    </div>
+  )
 }
 
 function EstudiarInner({ params }) {
@@ -102,6 +353,7 @@ function EstudiarInner({ params }) {
   const [session, setSession] = useState({ correct: 0, wrong: 0, partial: 0 })
   const [sessionId, setSessionId] = useState(null)
   const [finished, setFinished] = useState(false)
+  const [exitFinished, setExitFinished] = useState(false)
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState(null)
   const [showExitConfirm, setShowExitConfirm] = useState(false)
@@ -113,36 +365,25 @@ function EstudiarInner({ params }) {
   const [reportSending, setReportSending] = useState(false)
   const [sessionDoneIds, setSessionDoneIds] = useState(new Set())
   const [nextReviewDate, setNextReviewDate] = useState(null)
+  const [quizProgress, setQuizProgress] = useState(null)
+  const [userStats, setUserStats] = useState(null)
 
   useEffect(() => {
     async function load() {
       const { id } = await params
       setQuizId(id)
-
       const nParam = searchParams.get('n')
       const limite = nParam && nParam !== 'all' && nParam !== 'new' ? parseInt(nParam) : null
       setModoN(nParam)
-
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
       setUserId(user.id)
-
-      const { data: quizData } = await supabase
-        .from('quizzes').select('*').eq('id', id).single()
+      const { data: quizData } = await supabase.from('quizzes').select('*').eq('id', id).single()
       setQuiz(quizData)
-
-      const { data: qData } = await supabase
-        .from('questions').select('*, options(*)').eq('quiz_id', id).order('order')
-
+      const { data: qData } = await supabase.from('questions').select('*, options(*)').eq('quiz_id', id).order('order')
       const questionIds = qData?.map(q => q.id) || []
-      const { data: progressData } = await supabase
-        .from('user_question_progress')
-        .select('*')
-        .eq('user_id', user.id)
-        .in('question_id', questionIds)
-
+      const { data: progressData } = await supabase.from('user_question_progress').select('*').eq('user_id', user.id).in('question_id', questionIds)
       setQuestionsData(qData || [])
-
       let queue
       if (nParam === 'new') {
         const seenIds = new Set(progressData?.map(p => p.question_id) || [])
@@ -151,15 +392,9 @@ function EstudiarInner({ params }) {
       } else {
         queue = buildQueue(qData || [], progressData || [], limite)
       }
-
       setQuestions(queue)
-
-      const { data: sess } = await supabase
-        .from('study_sessions')
-        .insert({ user_id: user.id, quiz_id: id, total_questions: queue.length })
-        .select().single()
+      const { data: sess } = await supabase.from('study_sessions').insert({ user_id: user.id, quiz_id: id, total_questions: queue.length }).select().single()
       if (sess) setSessionId(sess.id)
-
       setLoading(false)
     }
     load()
@@ -168,55 +403,30 @@ function EstudiarInner({ params }) {
   function toggleOption(optId) {
     if (confirmed) return
     const q = questions[current]
-    if (q.type === 'single') {
-      setSelected([optId])
-    } else {
-      setSelected(prev =>
-        prev.includes(optId) ? prev.filter(id => id !== optId) : [...prev, optId]
-      )
-    }
+    if (q.type === 'single') setSelected([optId])
+    else setSelected(prev => prev.includes(optId) ? prev.filter(id => id !== optId) : [...prev, optId])
   }
 
   async function confirm() {
     if (selected.length === 0) return
     setConfirmed(true)
-
     const q = questions[current]
     const correctIds = q.options.filter(o => o.is_correct).map(o => o.id)
     const allCorrectSelected = correctIds.every(id => selected.includes(id))
     const noWrongSelected = selected.every(id => correctIds.includes(id))
-
     let quality = 0
     let resultType = 'wrong'
-
-    if (allCorrectSelected && noWrongSelected) {
-      quality = 5; resultType = 'correct'
-      setSession(prev => ({ ...prev, correct: prev.correct + 1 }))
-    } else if (selected.some(id => correctIds.includes(id))) {
-      quality = 2; resultType = 'partial'
-      setSession(prev => ({ ...prev, partial: prev.partial + 1 }))
-    } else {
-      quality = 0; resultType = 'wrong'
-      setSession(prev => ({ ...prev, wrong: prev.wrong + 1 }))
-    }
-
-    const { data: existing } = await supabase
-      .from('user_question_progress').select('*')
-      .eq('user_id', userId).eq('question_id', q.id).single()
-
+    if (allCorrectSelected && noWrongSelected) { quality = 5; resultType = 'correct'; setSession(prev => ({ ...prev, correct: prev.correct + 1 })) }
+    else if (selected.some(id => correctIds.includes(id))) { quality = 2; resultType = 'partial'; setSession(prev => ({ ...prev, partial: prev.partial + 1 })) }
+    else { quality = 0; resultType = 'wrong'; setSession(prev => ({ ...prev, wrong: prev.wrong + 1 })) }
+    const { data: existing } = await supabase.from('user_question_progress').select('*').eq('user_id', userId).eq('question_id', q.id).single()
     const rep = existing?.repetitions || 0
     const ease = existing?.easiness_factor || 2.5
     const intv = existing?.interval_days || 1
     const { repetitions, easiness, interval, nextDate } = sm2(quality, rep, ease, intv)
-
     await supabase.from('user_question_progress').upsert({
-      user_id: userId,
-      question_id: q.id,
-      easiness_factor: easiness,
-      interval_days: interval,
-      repetitions,
-      next_review_date: nextDate,
-      last_quality: quality,
+      user_id: userId, question_id: q.id, easiness_factor: easiness, interval_days: interval,
+      repetitions, next_review_date: nextDate, last_quality: quality,
       times_correct: (existing?.times_correct || 0) + (resultType === 'correct' ? 1 : 0),
       times_wrong: (existing?.times_wrong || 0) + (resultType === 'wrong' ? 1 : 0),
       updated_at: new Date().toISOString()
@@ -224,24 +434,23 @@ function EstudiarInner({ params }) {
   }
 
   async function finishSession(correct, wrong, partial) {
-  if (!sessionId) return
-  const xp = correct * 10 + partial * 4
-  await supabase.from('study_sessions')
-    .update({ finished_at: new Date().toISOString(), correct, wrong, partial, xp_earned: xp })
-    .eq('id', sessionId)
-  await supabase.rpc('update_xp_and_streak', { p_user_id: userId, p_xp_earned: xp })
-}
+    if (!sessionId) return
+    const xp = correct * 10 + partial * 4
+    await supabase.from('study_sessions').update({ finished_at: new Date().toISOString(), correct, wrong, partial, xp_earned: xp }).eq('id', sessionId)
+    await supabase.rpc('update_xp_and_streak', { p_user_id: userId, p_xp_earned: xp })
+  }
 
-  async function fetchNextReviewDate(questionIds) {
-    const { data } = await supabase
-      .from('user_question_progress')
-      .select('next_review_date')
-      .eq('user_id', userId)
-      .in('question_id', questionIds)
-      .order('next_review_date', { ascending: true })
-      .limit(1)
-    if (data && data.length > 0) {
-      setNextReviewDate(data[0].next_review_date)
+  async function fetchResumenData(questionIds, currentQuizId) {
+    // Progreso global del quiz
+    const { data: progress } = await supabase.rpc('get_quiz_progress', { p_user_id: userId, p_quiz_id: currentQuizId })
+    setQuizProgress(progress)
+    // Stats del usuario (XP, racha)
+    const { data: userData } = await supabase.from('users').select('xp_total, streak_current').eq('id', userId).single()
+    setUserStats(userData)
+    // Próxima fecha de repaso
+    if (questionIds?.length > 0) {
+      const { data } = await supabase.from('user_question_progress').select('next_review_date').eq('user_id', userId).in('question_id', questionIds).order('next_review_date', { ascending: true }).limit(1)
+      if (data && data.length > 0) setNextReviewDate(data[0].next_review_date)
     }
   }
 
@@ -250,7 +459,7 @@ function EstudiarInner({ params }) {
       const newDoneIds = new Set([...sessionDoneIds, ...questions.map(q => q.id)])
       setSessionDoneIds(newDoneIds)
       await finishSession(session.correct, session.wrong, session.partial)
-      await fetchNextReviewDate(questions.map(q => q.id))
+      await fetchResumenData(questions.map(q => q.id), quizId)
       setFinished(true)
     } else {
       setCurrent(prev => prev + 1)
@@ -262,31 +471,21 @@ function EstudiarInner({ params }) {
 
   async function handleExit() {
     await finishSession(session.correct, session.wrong, session.partial)
-    router.push('/dashboard')
+    await fetchResumenData(questions.map(q => q.id), quizId)
+    setShowExitConfirm(false)
+    setExitFinished(true)
   }
 
   async function continuar() {
     const limite = modoN && modoN !== 'all' && modoN !== 'new' ? parseInt(modoN) : null
-
     const questionIds = questionsData.map(q => q.id)
-    const { data: progressData } = await supabase
-      .from('user_question_progress')
-      .select('*')
-      .eq('user_id', userId)
-      .in('question_id', questionIds)
-
+    const { data: progressData } = await supabase.from('user_question_progress').select('*').eq('user_id', userId).in('question_id', questionIds)
     const allDoneIds = new Set([...sessionDoneIds, ...questions.map(q => q.id)])
     const remainingData = questionsData.filter(q => !allDoneIds.has(q.id))
-
     if (remainingData.length === 0) { router.push('/dashboard'); return }
-
     const nextBatch = buildQueue(remainingData, progressData || [], limite)
-
-    const { data: sess } = await supabase.from('study_sessions')
-      .insert({ user_id: userId, quiz_id: quizId, total_questions: nextBatch.length })
-      .select().single()
+    const { data: sess } = await supabase.from('study_sessions').insert({ user_id: userId, quiz_id: quizId, total_questions: nextBatch.length }).select().single()
     if (sess) setSessionId(sess.id)
-
     setQuestions(nextBatch)
     setCurrent(0)
     setSelected([])
@@ -301,10 +500,7 @@ function EstudiarInner({ params }) {
     if (!reportReason) return
     setReportSending(true)
     const q = questions[current]
-    await supabase.from('question_reports').insert({
-      question_id: q.id, quiz_id: quizId, user_id: userId,
-      reason: reportReason, comment: reportComment || null,
-    })
+    await supabase.from('question_reports').insert({ question_id: q.id, quiz_id: quizId, user_id: userId, reason: reportReason, comment: reportComment || null })
     setReportSending(false)
     setShowReport(false)
     setReportReason('')
@@ -341,88 +537,14 @@ function EstudiarInner({ params }) {
   const remaining = questionsData.filter(q => !allDoneIds.has(q.id))
   const hasMas = remaining.length > 0 && modoN !== 'new'
 
-  if (finished) {
-    const total = questions.length
-    const xp = session.correct * 10 + session.partial * 4
-    const mensaje = getMensaje(sessionId)
-    const fechaVuelta = formatFechaVuelta(nextReviewDate)
-
-    return (
-      <div style={{ minHeight: '100vh', background: 'white', fontFamily: 'Arial, sans-serif' }}>
-        <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 24px', borderBottom: '1px solid #f0f0f0' }}>
-          <a href="/dashboard" style={{ fontSize: '18px', fontWeight: '500', textDecoration: 'none', color: '#111' }}>
-            memo<span style={{ color: '#059669' }}>repe</span>
-          </a>
-        </nav>
-
-        <div style={{ maxWidth: '480px', margin: '0 auto', padding: '48px 24px' }}>
-
-          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-            <p style={{ fontSize: '15px', color: '#374151', lineHeight: '1.6', fontStyle: 'italic', margin: 0 }}>
-              "{mensaje}"
-            </p>
-          </div>
-
-          <div style={{ width: '100%', height: '90px', background: '#f9fafb', border: '1px dashed #e5e7eb', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '32px' }}>
-            <span style={{ fontSize: '11px', color: '#d1d5db', letterSpacing: '0.5px' }}>PUBLICIDAD</span>
-          </div>
-
-          <div style={{ marginBottom: '16px' }}>
-            <p style={{ fontSize: '13px', color: '#6b7280', textAlign: 'center', margin: '0 0 16px 0' }}>
-              {modoNombre} · {quiz?.title}
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '8px' }}>
-              <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
-                <div style={{ fontSize: '24px', fontWeight: '500', color: '#059669' }}>{session.correct}</div>
-                <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>Correctas</div>
-              </div>
-              <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
-                <div style={{ fontSize: '24px', fontWeight: '500', color: '#ef4444' }}>{session.wrong}</div>
-                <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>Incorrectas</div>
-              </div>
-              <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
-                <div style={{ fontSize: '24px', fontWeight: '500', color: '#d97706' }}>{session.partial}</div>
-                <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>Parciales</div>
-              </div>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-              <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
-                <div style={{ fontSize: '18px', fontWeight: '500', color: '#111' }}>{Math.round((session.correct / total) * 100)}%</div>
-                <div style={{ fontSize: '11px', color: '#9ca3af' }}>precisión</div>
-              </div>
-              <div style={{ background: '#f0fdf4', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
-                <div style={{ fontSize: '18px', fontWeight: '500', color: '#059669' }}>+{xp} XP</div>
-                <div style={{ fontSize: '11px', color: '#059669' }}>ganados esta sesión</div>
-              </div>
-            </div>
-          </div>
-
-          {fechaVuelta && (
-            <div style={{ textAlign: 'center', marginBottom: '28px', padding: '14px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px' }}>
-              <p style={{ fontSize: '13px', color: '#92400e', margin: 0 }}>
-                Volvé <strong>{fechaVuelta}</strong> para consolidar lo aprendido.
-              </p>
-            </div>
-          )}
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {hasMas && limite && (
-              <button onClick={continuar} style={{ padding: '12px', fontSize: '14px', fontWeight: '500', color: 'white', background: '#059669', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>
-                Continuar con otras {Math.min(limite, remaining.length)} preguntas
-              </button>
-            )}
-            <a href={'/estudiar/' + quizId + '/inicio'} style={{ display: 'block', padding: '12px', fontSize: '14px', color: '#374151', background: '#f3f4f6', borderRadius: '10px', textDecoration: 'none', textAlign: 'center' }}>
-              Cambiar modo de estudio
-            </a>
-            <a href="/dashboard" style={{ display: 'block', padding: '12px', fontSize: '14px', color: '#9ca3af', textDecoration: 'none', textAlign: 'center' }}>
-              Ir al dashboard
-            </a>
-          </div>
-
-        </div>
-      </div>
-    )
+  const resumenProps = {
+    session, questions, quiz, quizId, sessionId, modoNombre,
+    nextReviewDate, hasMas, limite, remaining, continuar,
+    quizProgress, userStats,
   }
+
+  if (finished) return <ResumenSesion {...resumenProps} esAnticipado={false} />
+  if (exitFinished) return <ResumenSesion {...resumenProps} esAnticipado={true} />
 
   const q = questions[current]
   const correctIds = q?.options?.filter(o => o.is_correct).map(o => o.id) || []
@@ -461,11 +583,17 @@ function EstudiarInner({ params }) {
       {showExitConfirm && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
           <div style={{ background: 'white', borderRadius: '16px', padding: '28px', maxWidth: '360px', width: '90%', textAlign: 'center' }}>
-            <p style={{ fontSize: '16px', fontWeight: '500', color: '#111', marginBottom: '8px' }}>Salir de la sesion?</p>
-            <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '20px' }}>Tu progreso hasta aca se va a guardar.</p>
+            <p style={{ fontSize: '16px', fontWeight: '500', color: '#111', marginBottom: '8px' }}>¿Terminar la sesión?</p>
+            <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '20px' }}>
+              Completaste {session.correct + session.wrong + session.partial} de {questions.length} preguntas. Tu progreso se va a guardar.
+            </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <button onClick={handleExit} style={{ padding: '10px', fontSize: '14px', fontWeight: '500', color: 'white', background: '#059669', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Si, guardar y salir</button>
-              <button onClick={() => setShowExitConfirm(false)} style={{ padding: '10px', fontSize: '14px', color: '#6b7280', background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', cursor: 'pointer' }}>Seguir estudiando</button>
+              <button onClick={handleExit} style={{ padding: '10px', fontSize: '14px', fontWeight: '500', color: 'white', background: '#059669', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
+                Sí, guardar y terminar
+              </button>
+              <button onClick={() => setShowExitConfirm(false)} style={{ padding: '10px', fontSize: '14px', color: '#6b7280', background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', cursor: 'pointer' }}>
+                Seguir estudiando
+              </button>
             </div>
           </div>
         </div>
@@ -514,18 +642,9 @@ function EstudiarInner({ params }) {
 
         {confirmed && (
           <div style={{ display: 'flex', gap: '12px', fontSize: '11px', color: '#6b7280', marginBottom: '12px', flexWrap: 'wrap' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: '#059669', display: 'inline-block' }}></span>
-              Correcta seleccionada
-            </span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: '#fef3c7', border: '1px solid #d97706', display: 'inline-block' }}></span>
-              Correcta no seleccionada
-            </span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: '#ef4444', display: 'inline-block' }}></span>
-              Incorrecta seleccionada
-            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: '10px', height: '10px', borderRadius: '2px', background: '#059669', display: 'inline-block' }}></span>Correcta seleccionada</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: '10px', height: '10px', borderRadius: '2px', background: '#fef3c7', border: '1px solid #d97706', display: 'inline-block' }}></span>Correcta no seleccionada</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: '10px', height: '10px', borderRadius: '2px', background: '#ef4444', display: 'inline-block' }}></span>Incorrecta seleccionada</span>
           </div>
         )}
 
@@ -539,12 +658,12 @@ function EstudiarInner({ params }) {
           <>
             <div style={{ background: allCorrect ? '#f0fdf4' : someCorrect ? '#fffbeb' : '#fef2f2', border: '1px solid', borderColor: allCorrect ? '#6ee7b7' : someCorrect ? '#fde68a' : '#fecaca', borderRadius: '10px', padding: '14px', marginBottom: '12px' }}>
               <div style={{ fontSize: '14px', fontWeight: '500', color: allCorrect ? '#065f46' : someCorrect ? '#92400e' : '#b91c1c', marginBottom: q.explanation ? '8px' : '0' }}>
-                {allCorrect ? 'Correcto!' : someCorrect ? 'Casi. Te falto alguna.' : 'Incorrecto.'}
+                {allCorrect ? '¡Correcto!' : someCorrect ? 'Casi. Te faltó alguna.' : 'Incorrecto.'}
               </div>
               {q.explanation && (
                 <>
                   <div style={{ height: '1px', background: allCorrect ? '#6ee7b7' : someCorrect ? '#fde68a' : '#fecaca', margin: '8px 0' }} />
-                  <div style={{ fontSize: '11px', fontWeight: '500', color: '#6b7280', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Explicacion</div>
+                  <div style={{ fontSize: '11px', fontWeight: '500', color: '#6b7280', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Explicación</div>
                   <div style={{ fontSize: '13px', color: allCorrect ? '#065f46' : someCorrect ? '#92400e' : '#b91c1c', lineHeight: '1.6' }}>{q.explanation}</div>
                 </>
               )}
