@@ -179,7 +179,6 @@ export default async function Explorar({ searchParams }) {
               const p = progressMap[quiz.id]
               const tieneProgreso = p && p.seen > 0
 
-              // Línea de metadata (solo campos no nulos)
               const metaParts = [
                 quiz.subject,
                 quiz.faculty,
@@ -187,56 +186,46 @@ export default async function Explorar({ searchParams }) {
                 quiz.year_course,
               ].filter(Boolean)
 
+              const urlEstudiar = user
+                ? '/estudiar/' + quiz.id + '/inicio'
+                : '/estudiar/' + quiz.id + '?modo=invitado'
+
               return (
                 <div key={quiz.id} style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column' }}>
 
-                  {/* Categoría */}
                   <div style={{ marginBottom: '8px' }}>
                     <span style={{ fontSize: '11px', fontWeight: '500', padding: '2px 8px', borderRadius: '6px', background: catStyle.bg, color: catStyle.color }}>
                       {quiz.category || 'Otro'}
                     </span>
                   </div>
 
-                  {/* Título */}
                   <div style={{ fontSize: '14px', fontWeight: '500', color: '#111', marginBottom: '4px', lineHeight: '1.3' }}>
                     {quiz.title}
                   </div>
 
-                  {/* Metadata: materia · facultad · profesor · año */}
                   {metaParts.length > 0 && (
                     <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '10px', lineHeight: '1.5' }}>
                       {metaParts.join(' · ')}
                     </div>
                   )}
 
-                  {/* Descripción truncada (2 líneas) */}
                   {quiz.description && (
-                    <div style={{
-                      fontSize: '12px', color: '#6b7280', marginBottom: '10px', lineHeight: '1.5',
-                      display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                    }}>
+                    <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '10px', lineHeight: '1.5', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                       {quiz.description}
                     </div>
                   )}
 
-                  {/* Notas truncadas (2 líneas) */}
                   {quiz.notes && (
-                    <div style={{
-                      fontSize: '12px', color: '#78350f', background: '#fffbeb', border: '1px solid #fde68a',
-                      borderRadius: '6px', padding: '8px 10px', marginBottom: '10px', lineHeight: '1.4',
-                      display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                    }}>
+                    <div style={{ fontSize: '12px', color: '#78350f', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '6px', padding: '8px 10px', marginBottom: '10px', lineHeight: '1.4', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                       {quiz.notes}
                     </div>
                   )}
 
-                  {/* Stats */}
                   <div style={{ display: 'flex', gap: '12px', marginBottom: tieneProgreso ? '10px' : '0' }}>
                     <span style={{ fontSize: '12px', color: '#9ca3af' }}>{quiz.question_count} preguntas</span>
                     <span style={{ fontSize: '12px', color: '#9ca3af' }}>{quiz.student_count || 0} estudiando</span>
                   </div>
 
-                  {/* Progreso */}
                   {tieneProgreso && (
                     <div style={{ marginTop: '10px', padding: '8px 10px', background: '#f9fafb', borderRadius: '8px' }}>
                       <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', fontSize: '11px', marginBottom: '6px' }}>
@@ -251,8 +240,7 @@ export default async function Explorar({ searchParams }) {
                     </div>
                   )}
 
-                  {/* Footer */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f0f0f0', paddingTop: '10px', marginTop: 'auto', paddingTop: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f0f0f0', paddingTop: '10px', marginTop: 'auto' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                       {username && (
                         <a href={'/usuario/' + username} style={{ fontSize: '11px', color: '#059669', fontWeight: '500', textDecoration: 'none' }}>@{username}</a>
@@ -261,7 +249,7 @@ export default async function Explorar({ searchParams }) {
                     </div>
                     <div style={{ display: 'flex', gap: '6px' }}>
                       <ModalQuiz quiz={quiz} progressMap={progressMap} />
-                      <a href={'/estudiar/' + quiz.id + '/inicio'} style={{ fontSize: '12px', fontWeight: '500', color: '#065f46', background: '#d1fae5', border: '1px solid #6ee7b7', padding: '5px 12px', borderRadius: '6px', textDecoration: 'none' }}>
+                      <a href={urlEstudiar} style={{ fontSize: '12px', fontWeight: '500', color: '#065f46', background: '#d1fae5', border: '1px solid #6ee7b7', padding: '5px 12px', borderRadius: '6px', textDecoration: 'none' }}>
                         {tieneProgreso ? 'Continuar' : 'Estudiar'}
                       </a>
                     </div>

@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import LoadingScreen from '@/app/components/LoadingScreen'
 
+const LIMITE_INVITADO = 20
+
 const MENSAJES_MOTIVADORES = [
   "El conocimiento que repetís hoy es el que no olvidás mañana.",
   "Cada sesión es un ladrillo. Seguís construyendo.",
@@ -53,10 +55,8 @@ function getNivel(xpTotal) {
   return { nivelActual, nivelSiguiente, pct, xpFalta: nivelSiguiente ? nivelSiguiente.xp - xpTotal : 0 }
 }
 
-function getMensaje(sessionId) {
-  if (!sessionId) return MENSAJES_MOTIVADORES[0]
-  const idx = sessionId.charCodeAt(0) % MENSAJES_MOTIVADORES.length
-  return MENSAJES_MOTIVADORES[idx]
+function getMensaje() {
+  return MENSAJES_MOTIVADORES[Math.floor(Math.random() * MENSAJES_MOTIVADORES.length)]
 }
 
 function formatFechaVuelta(dateStr) {
@@ -107,7 +107,34 @@ function buildQueue(questionsData, progressData, limite) {
   return limite ? scored.slice(0, limite) : scored
 }
 
-// ── Pantalla de resumen (fin normal o salida anticipada) ──────────────────
+// ── Banner publicitario reutilizable ─────────────────────────────────────
+function AdBanner({ position = 'inline' }) {
+  if (position === 'fixed') {
+    return (
+      <div style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
+        background: 'white', borderTop: '1px solid #e5e7eb',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        height: '60px', gap: '12px',
+      }}>
+        <span style={{ fontSize: '10px', color: '#d1d5db', letterSpacing: '0.5px' }}>PUBLICIDAD</span>
+        <div style={{ flex: 1, maxWidth: '600px', height: '50px', background: '#f9fafb', border: '1px dashed #e5e7eb', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ fontSize: '10px', color: '#d1d5db' }}>Anuncio</span>
+        </div>
+        <a href="/dashboard" style={{ fontSize: '11px', fontWeight: '500', color: 'white', background: '#059669', padding: '6px 12px', borderRadius: '6px', textDecoration: 'none', whiteSpace: 'nowrap', marginRight: '8px' }}>
+          Sin publicidad →
+        </a>
+      </div>
+    )
+  }
+  return (
+    <div style={{ width: '100%', height: '80px', background: '#f9fafb', border: '1px dashed #e5e7eb', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '16px 0', gap: '8px' }}>
+      <span style={{ fontSize: '10px', color: '#d1d5db', letterSpacing: '0.5px' }}>PUBLICIDAD</span>
+    </div>
+  )
+}
+
+// ── Resumen para usuarios registrados ────────────────────────────────────
 function ResumenSesion({
   session, questions, quiz, quizId, sessionId, modoNombre,
   nextReviewDate, hasMas, limite, remaining, continuar,
@@ -117,23 +144,17 @@ function ResumenSesion({
   const respondidas = session.correct + session.wrong + session.partial
   const xpGanados = session.correct * 10 + session.partial * 4
   const precision = respondidas > 0 ? Math.round((session.correct / respondidas) * 100) : 0
-  const mensaje = getMensaje(sessionId)
+  const mensaje = getMensaje()
   const fechaVuelta = formatFechaVuelta(nextReviewDate)
-
-  // Nivel
   const xpTotal = (userStats?.xp_total || 0) + xpGanados
   const { nivelActual, nivelSiguiente, pct, xpFalta } = getNivel(xpTotal)
   const streak = userStats?.streak_current || 0
-
-  // Badges desbloqueados esta sesión (lógica básica)
   const badges = []
   if (session.correct + session.wrong + session.partial > 0 && !userStats?.had_first_session) {
     badges.push({ icon: '⚡', nombre: 'Primera sesión', desc: 'Completaste tu primera sesión de estudio' })
   }
   if (streak >= 7) badges.push({ icon: '🔥', nombre: 'Racha de 7 días', desc: `Llevas ${streak} días seguidos estudiando` })
   if (precision >= 80 && respondidas >= 10) badges.push({ icon: '🎯', nombre: 'Precisión 80%', desc: 'Alcanzaste 80% de precisión en esta sesión' })
-
-  // ¿Cumplió objetivo del planificador?
   const objetivoCumplido = quizProgress?.due_today > 0 && respondidas >= quizProgress.due_today
 
   return (
@@ -143,18 +164,13 @@ function ResumenSesion({
           memo<span style={{ color: '#059669' }}>repe</span>
         </a>
       </nav>
-
       <div style={{ maxWidth: '480px', margin: '0 auto', padding: '36px 24px' }}>
-
-        {/* Título según tipo */}
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           {esAnticipado ? (
             <>
               <div style={{ fontSize: '28px', marginBottom: '8px' }}>💾</div>
               <div style={{ fontSize: '16px', fontWeight: '500', color: '#111', marginBottom: '4px' }}>Sesión guardada</div>
-              <div style={{ fontSize: '13px', color: '#9ca3af' }}>
-                Completaste {respondidas} de {total} preguntas
-              </div>
+              <div style={{ fontSize: '13px', color: '#9ca3af' }}>Completaste {respondidas} de {total} preguntas</div>
             </>
           ) : (
             <>
@@ -163,25 +179,11 @@ function ResumenSesion({
             </>
           )}
         </div>
-
-        {/* Mensaje motivador */}
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <p style={{ fontSize: '14px', color: '#374151', lineHeight: '1.6', fontStyle: 'italic', margin: 0 }}>
-            "{mensaje}"
-          </p>
+          <p style={{ fontSize: '14px', color: '#374151', lineHeight: '1.6', fontStyle: 'italic', margin: 0 }}>"{mensaje}"</p>
         </div>
-
-        {/* Publicidad */}
-        <div style={{ width: '100%', height: '90px', background: '#f9fafb', border: '1px dashed #e5e7eb', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
-          <span style={{ fontSize: '11px', color: '#d1d5db', letterSpacing: '0.5px' }}>PUBLICIDAD</span>
-        </div>
-
-        {/* Modo y quiz */}
-        <p style={{ fontSize: '13px', color: '#6b7280', textAlign: 'center', margin: '0 0 14px 0' }}>
-          {modoNombre} · {quiz?.title}
-        </p>
-
-        {/* Stats principales */}
+        <AdBanner />
+        <p style={{ fontSize: '13px', color: '#6b7280', textAlign: 'center', margin: '0 0 14px 0' }}>{modoNombre} · {quiz?.title}</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '8px' }}>
           <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
             <div style={{ fontSize: '24px', fontWeight: '500', color: '#059669' }}>{session.correct}</div>
@@ -196,7 +198,6 @@ function ResumenSesion({
             <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>Parciales</div>
           </div>
         </div>
-
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '16px' }}>
           <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
             <div style={{ fontSize: '18px', fontWeight: '500', color: '#111' }}>{precision}%</div>
@@ -207,13 +208,9 @@ function ResumenSesion({
             <div style={{ fontSize: '11px', color: '#059669' }}>ganados esta sesión</div>
           </div>
         </div>
-
-        {/* Progreso global del quiz */}
         {quizProgress && quizProgress.total > 0 && (
           <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '14px 16px', marginBottom: '12px' }}>
-            <div style={{ fontSize: '12px', fontWeight: '500', color: '#6b7280', marginBottom: '10px' }}>
-              Progreso en {quiz?.title}
-            </div>
+            <div style={{ fontSize: '12px', fontWeight: '500', color: '#6b7280', marginBottom: '10px' }}>Progreso en {quiz?.title}</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '10px' }}>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: '16px', fontWeight: '500', color: '#374151' }}>{quizProgress.seen}</div>
@@ -228,17 +225,12 @@ function ResumenSesion({
                 <div style={{ fontSize: '10px', color: '#9ca3af' }}>sin ver</div>
               </div>
             </div>
-            {/* Barra de dominadas */}
             <div style={{ height: '6px', background: '#e5e7eb', borderRadius: '4px', overflow: 'hidden' }}>
               <div style={{ height: '100%', width: quizProgress.dominated_pct + '%', background: '#059669', borderRadius: '4px', transition: 'width 0.5s' }} />
             </div>
-            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '6px', textAlign: 'right' }}>
-              {quizProgress.dominated_pct}% dominado
-            </div>
+            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '6px', textAlign: 'right' }}>{quizProgress.dominated_pct}% dominado</div>
           </div>
         )}
-
-        {/* Objetivo del día */}
         {objetivoCumplido && (
           <div style={{ background: '#f0fdf4', border: '1px solid #6ee7b7', borderRadius: '10px', padding: '12px 16px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span style={{ fontSize: '18px' }}>✅</span>
@@ -248,45 +240,28 @@ function ResumenSesion({
             </div>
           </div>
         )}
-
-        {/* Racha */}
         {streak > 0 && (
-          <div style={{ background: streak >= 7 ? '#fff7ed' : '#f9fafb', border: '1px solid', borderColor: streak >= 7 ? '#fed7aa' : '#e5e7eb', borderRadius: '10px', padding: '12px 16px', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '18px' }}>🔥</span>
-              <div>
-                <div style={{ fontSize: '13px', fontWeight: '500', color: streak >= 7 ? '#c2410c' : '#374151' }}>
-                  {streak} {streak === 1 ? 'día' : 'días'} de racha
-                </div>
-                <div style={{ fontSize: '11px', color: '#9ca3af' }}>
-                  {streak >= 30 ? '¡Racha increíble!' : streak >= 7 ? '¡Racha excelente!' : 'Seguí así para mantenerla'}
-                </div>
-              </div>
+          <div style={{ background: streak >= 7 ? '#fff7ed' : '#f9fafb', border: '1px solid', borderColor: streak >= 7 ? '#fed7aa' : '#e5e7eb', borderRadius: '10px', padding: '12px 16px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '18px' }}>🔥</span>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: '500', color: streak >= 7 ? '#c2410c' : '#374151' }}>{streak} {streak === 1 ? 'día' : 'días'} de racha</div>
+              <div style={{ fontSize: '11px', color: '#9ca3af' }}>{streak >= 30 ? '¡Racha increíble!' : streak >= 7 ? '¡Racha excelente!' : 'Seguí así para mantenerla'}</div>
             </div>
           </div>
         )}
-
-        {/* Nivel y XP */}
         <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '14px 16px', marginBottom: '12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <div>
-              <span style={{ fontSize: '13px', fontWeight: '500', color: '#111' }}>Nivel {nivelActual.nivel} · {nivelActual.nombre}</span>
-            </div>
+            <span style={{ fontSize: '13px', fontWeight: '500', color: '#111' }}>Nivel {nivelActual.nivel} · {nivelActual.nombre}</span>
             <span style={{ fontSize: '12px', color: '#9ca3af' }}>{xpTotal.toLocaleString('es-AR')} XP</span>
           </div>
           <div style={{ height: '6px', background: '#e5e7eb', borderRadius: '4px', overflow: 'hidden', marginBottom: '6px' }}>
             <div style={{ height: '100%', width: pct + '%', background: '#059669', borderRadius: '4px', transition: 'width 0.5s' }} />
           </div>
-          {nivelSiguiente ? (
-            <div style={{ fontSize: '11px', color: '#9ca3af' }}>
-              Faltan <strong>{xpFalta.toLocaleString('es-AR')} XP</strong> para {nivelSiguiente.nombre}
-            </div>
-          ) : (
-            <div style={{ fontSize: '11px', color: '#059669' }}>¡Nivel máximo alcanzado!</div>
-          )}
+          {nivelSiguiente
+            ? <div style={{ fontSize: '11px', color: '#9ca3af' }}>Faltan <strong>{xpFalta.toLocaleString('es-AR')} XP</strong> para {nivelSiguiente.nombre}</div>
+            : <div style={{ fontSize: '11px', color: '#059669' }}>¡Nivel máximo alcanzado!</div>
+          }
         </div>
-
-        {/* Badges desbloqueados */}
         {badges.length > 0 && (
           <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '14px 16px', marginBottom: '12px' }}>
             <div style={{ fontSize: '12px', fontWeight: '500', color: '#92400e', marginBottom: '10px' }}>🏆 Logros desbloqueados</div>
@@ -303,17 +278,11 @@ function ResumenSesion({
             </div>
           </div>
         )}
-
-        {/* Cuándo volver */}
         {fechaVuelta && (
           <div style={{ textAlign: 'center', marginBottom: '24px', padding: '14px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px' }}>
-            <p style={{ fontSize: '13px', color: '#92400e', margin: 0 }}>
-              Volvé <strong>{fechaVuelta}</strong> para consolidar lo aprendido.
-            </p>
+            <p style={{ fontSize: '13px', color: '#92400e', margin: 0 }}>Volvé <strong>{fechaVuelta}</strong> para consolidar lo aprendido.</p>
           </div>
         )}
-
-        {/* Acciones */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {!esAnticipado && hasMas && limite && (
             <button onClick={continuar} style={{ padding: '12px', fontSize: '14px', fontWeight: '500', color: 'white', background: '#059669', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>
@@ -332,7 +301,112 @@ function ResumenSesion({
             Ir al dashboard
           </a>
         </div>
+      </div>
+    </div>
+  )
+}
 
+// ── Resumen para invitados ────────────────────────────────────────────────
+function ResumenInvitado({ session, quiz, quizId, totalPreguntas }) {
+  const respondidas = session.correct + session.wrong + session.partial
+  const precision = respondidas > 0 ? Math.round((session.correct / respondidas) * 100) : 0
+  const xpSimulado = session.correct * 10 + session.partial * 4
+  const restantes = totalPreguntas - respondidas
+
+  return (
+    <div style={{ minHeight: '100vh', background: 'white', fontFamily: 'Arial, sans-serif' }}>
+      <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 24px', borderBottom: '1px solid #f0f0f0' }}>
+        <a href="/" style={{ fontSize: '18px', fontWeight: '500', textDecoration: 'none', color: '#111' }}>
+          memo<span style={{ color: '#059669' }}>repe</span>
+        </a>
+        <a href="/dashboard" style={{ fontSize: '13px', fontWeight: '500', color: '#065f46', background: '#d1fae5', border: '1px solid #6ee7b7', padding: '6px 14px', borderRadius: '8px', textDecoration: 'none' }}>
+          Crear cuenta gratis
+        </a>
+      </nav>
+
+      <div style={{ maxWidth: '480px', margin: '0 auto', padding: '36px 24px' }}>
+
+        {/* Resultado */}
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <div style={{ fontSize: '32px', marginBottom: '8px' }}>
+            {precision >= 80 ? '🎯' : precision >= 50 ? '📈' : '💪'}
+          </div>
+          <div style={{ fontSize: '16px', fontWeight: '500', color: '#111', marginBottom: '4px' }}>
+            Respondiste {respondidas} preguntas
+          </div>
+          <div style={{ fontSize: '13px', color: '#9ca3af' }}>{quiz?.title}</div>
+        </div>
+
+        {/* Stats */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '8px' }}>
+          <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
+            <div style={{ fontSize: '24px', fontWeight: '500', color: '#059669' }}>{session.correct}</div>
+            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>Correctas</div>
+          </div>
+          <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
+            <div style={{ fontSize: '24px', fontWeight: '500', color: '#ef4444' }}>{session.wrong}</div>
+            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>Incorrectas</div>
+          </div>
+          <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
+            <div style={{ fontSize: '24px', fontWeight: '500', color: '#d97706' }}>{session.partial}</div>
+            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>Parciales</div>
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '24px' }}>
+          <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
+            <div style={{ fontSize: '18px', fontWeight: '500', color: '#111' }}>{precision}%</div>
+            <div style={{ fontSize: '11px', color: '#9ca3af' }}>precisión</div>
+          </div>
+          <div style={{ background: '#f0fdf4', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
+            <div style={{ fontSize: '18px', fontWeight: '500', color: '#059669' }}>+{xpSimulado} XP</div>
+            <div style={{ fontSize: '11px', color: '#059669' }}>que perderías sin cuenta</div>
+          </div>
+        </div>
+
+        {/* Publicidad */}
+        <AdBanner />
+
+        {/* CTA principal */}
+        <div style={{ background: '#f0fdf4', border: '1px solid #6ee7b7', borderRadius: '16px', padding: '24px', marginBottom: '16px', textAlign: 'center' }}>
+          <div style={{ fontSize: '20px', marginBottom: '8px' }}>🔓</div>
+          <div style={{ fontSize: '15px', fontWeight: '500', color: '#065f46', marginBottom: '8px' }}>
+            Registrate gratis para guardar tu progreso
+          </div>
+          <div style={{ fontSize: '13px', color: '#059669', lineHeight: '1.6', marginBottom: '16px' }}>
+            {restantes > 0 && `Te quedan ${restantes} preguntas sin ver en este banco. `}
+            Con una cuenta gratuita el algoritmo recuerda dónde estás, te muestra cada pregunta en el momento exacto antes de que la olvides y guarda tu racha de estudio.
+          </div>
+          <a
+            href="/dashboard"
+            style={{ display: 'block', padding: '14px', fontSize: '15px', fontWeight: '500', color: 'white', background: '#059669', borderRadius: '10px', textDecoration: 'none', marginBottom: '8px' }}
+          >
+            Crear cuenta con Google — es gratis →
+          </a>
+          <div style={{ fontSize: '11px', color: '#9ca3af' }}>Solo necesitás una cuenta de Google. Sin tarjeta.</div>
+        </div>
+
+        {/* Lo que se perdieron */}
+        <div style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
+          <div style={{ fontSize: '12px', fontWeight: '500', color: '#6b7280', marginBottom: '12px' }}>Con una cuenta gratuita hubieras tenido:</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {[
+              { icon: '🧠', texto: 'Algoritmo SM-2 que optimiza cuándo repasar cada pregunta' },
+              { icon: '📊', texto: 'Progreso guardado — dominadas, en progreso, expertas' },
+              { icon: '🔥', texto: 'Racha de estudio y XP acumulado' },
+              { icon: '📅', texto: 'Planificador de exámenes con fecha y días de estudio' },
+              { icon: '🏆', texto: 'Logros y badges por tus avances' },
+            ].map((item, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '16px' }}>{item.icon}</span>
+                <span style={{ fontSize: '12px', color: '#6b7280' }}>{item.texto}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <a href={'/q/' + quiz?.slug || '/explorar'} style={{ display: 'block', padding: '12px', fontSize: '13px', color: '#9ca3af', textDecoration: 'none', textAlign: 'center' }}>
+          ← Volver al banco de preguntas
+        </a>
       </div>
     </div>
   )
@@ -356,6 +430,7 @@ function EstudiarInner({ params }) {
   const [exitFinished, setExitFinished] = useState(false)
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState(null)
+  const [esInvitado, setEsInvitado] = useState(false)
   const [showExitConfirm, setShowExitConfirm] = useState(false)
   const [modoN, setModoN] = useState(null)
   const [showReport, setShowReport] = useState(false)
@@ -373,10 +448,27 @@ function EstudiarInner({ params }) {
       const { id } = await params
       setQuizId(id)
       const nParam = searchParams.get('n')
-      const limite = nParam && nParam !== 'all' && nParam !== 'new' ? parseInt(nParam) : null
+      const modoInvitado = searchParams.get('modo') === 'invitado'
       setModoN(nParam)
+
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/'); return }
+
+      // ── Modo invitado ──
+      if (!user) {
+        setEsInvitado(true)
+        const { data: quizData } = await supabase.from('quizzes').select('*').eq('id', id).single()
+        if (!quizData || quizData.visibility === 'private') { router.push('/'); return }
+        setQuiz(quizData)
+        const { data: qData } = await supabase.from('questions').select('*, options(*)').eq('quiz_id', id).order('order')
+        setQuestionsData(qData || [])
+        // Cola aleatoria simple, sin SM-2, límite 20
+        const shuffled = (qData || []).map(q => ({ ...q, options: [...q.options].sort(() => Math.random() - 0.5) })).sort(() => Math.random() - 0.5).slice(0, LIMITE_INVITADO)
+        setQuestions(shuffled)
+        setLoading(false)
+        return
+      }
+
+      // ── Modo registrado ──
       setUserId(user.id)
       const { data: quizData } = await supabase.from('quizzes').select('*').eq('id', id).single()
       setQuiz(quizData)
@@ -384,6 +476,7 @@ function EstudiarInner({ params }) {
       const questionIds = qData?.map(q => q.id) || []
       const { data: progressData } = await supabase.from('user_question_progress').select('*').eq('user_id', user.id).in('question_id', questionIds)
       setQuestionsData(qData || [])
+      const limite = nParam && nParam !== 'all' && nParam !== 'new' ? parseInt(nParam) : null
       let queue
       if (nParam === 'new') {
         const seenIds = new Set(progressData?.map(p => p.question_id) || [])
@@ -419,35 +512,37 @@ function EstudiarInner({ params }) {
     if (allCorrectSelected && noWrongSelected) { quality = 5; resultType = 'correct'; setSession(prev => ({ ...prev, correct: prev.correct + 1 })) }
     else if (selected.some(id => correctIds.includes(id))) { quality = 2; resultType = 'partial'; setSession(prev => ({ ...prev, partial: prev.partial + 1 })) }
     else { quality = 0; resultType = 'wrong'; setSession(prev => ({ ...prev, wrong: prev.wrong + 1 })) }
-    const { data: existing } = await supabase.from('user_question_progress').select('*').eq('user_id', userId).eq('question_id', q.id).single()
-    const rep = existing?.repetitions || 0
-    const ease = existing?.easiness_factor || 2.5
-    const intv = existing?.interval_days || 1
-    const { repetitions, easiness, interval, nextDate } = sm2(quality, rep, ease, intv)
-    await supabase.from('user_question_progress').upsert({
-      user_id: userId, question_id: q.id, easiness_factor: easiness, interval_days: interval,
-      repetitions, next_review_date: nextDate, last_quality: quality,
-      times_correct: (existing?.times_correct || 0) + (resultType === 'correct' ? 1 : 0),
-      times_wrong: (existing?.times_wrong || 0) + (resultType === 'wrong' ? 1 : 0),
-      updated_at: new Date().toISOString()
-    }, { onConflict: 'user_id,question_id' })
+
+    // Solo guardar progreso si es usuario registrado
+    if (!esInvitado && userId) {
+      const { data: existing } = await supabase.from('user_question_progress').select('*').eq('user_id', userId).eq('question_id', q.id).single()
+      const rep = existing?.repetitions || 0
+      const ease = existing?.easiness_factor || 2.5
+      const intv = existing?.interval_days || 1
+      const { repetitions, easiness, interval, nextDate } = sm2(quality, rep, ease, intv)
+      await supabase.from('user_question_progress').upsert({
+        user_id: userId, question_id: q.id, easiness_factor: easiness, interval_days: interval,
+        repetitions, next_review_date: nextDate, last_quality: quality,
+        times_correct: (existing?.times_correct || 0) + (resultType === 'correct' ? 1 : 0),
+        times_wrong: (existing?.times_wrong || 0) + (resultType === 'wrong' ? 1 : 0),
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id,question_id' })
+    }
   }
 
   async function finishSession(correct, wrong, partial) {
-    if (!sessionId) return
+    if (!sessionId || esInvitado) return
     const xp = correct * 10 + partial * 4
     await supabase.from('study_sessions').update({ finished_at: new Date().toISOString(), correct, wrong, partial, xp_earned: xp }).eq('id', sessionId)
     await supabase.rpc('update_xp_and_streak', { p_user_id: userId, p_xp_earned: xp })
   }
 
   async function fetchResumenData(questionIds, currentQuizId) {
-    // Progreso global del quiz
+    if (esInvitado) return
     const { data: progress } = await supabase.rpc('get_quiz_progress', { p_user_id: userId, p_quiz_id: currentQuizId })
     setQuizProgress(progress)
-    // Stats del usuario (XP, racha)
     const { data: userData } = await supabase.from('users').select('xp_total, streak_current').eq('id', userId).single()
     setUserStats(userData)
-    // Próxima fecha de repaso
     if (questionIds?.length > 0) {
       const { data } = await supabase.from('user_question_progress').select('next_review_date').eq('user_id', userId).in('question_id', questionIds).order('next_review_date', { ascending: true }).limit(1)
       if (data && data.length > 0) setNextReviewDate(data[0].next_review_date)
@@ -497,7 +592,7 @@ function EstudiarInner({ params }) {
   }
 
   async function sendReport() {
-    if (!reportReason) return
+    if (!reportReason || esInvitado) return
     setReportSending(true)
     const q = questions[current]
     await supabase.from('question_reports').insert({ question_id: q.id, quiz_id: quizId, user_id: userId, reason: reportReason, comment: reportComment || null })
@@ -531,7 +626,7 @@ function EstudiarInner({ params }) {
   if (questions.length === 0) return <div style={{ padding: '40px', fontFamily: 'Arial', textAlign: 'center', color: '#9ca3af' }}>Este quiz no tiene preguntas todavía.</div>
 
   const modoNombres = { 'new': 'Solo nuevas', '10': 'Calentamiento', '30': 'Sesion express', '50': 'Sesion completa', '100': 'Maraton', 'all': 'Repaso total' }
-  const modoNombre = modoNombres[modoN] || 'Sesion'
+  const modoNombre = esInvitado ? 'Modo invitado' : (modoNombres[modoN] || 'Sesion')
   const limite = modoN && modoN !== 'all' && modoN !== 'new' ? parseInt(modoN) : null
   const allDoneIds = finished ? new Set([...sessionDoneIds, ...questions.map(q => q.id)]) : new Set()
   const remaining = questionsData.filter(q => !allDoneIds.has(q.id))
@@ -543,7 +638,10 @@ function EstudiarInner({ params }) {
     quizProgress, userStats,
   }
 
+  // Resumen invitado
+  if (finished && esInvitado) return <ResumenInvitado session={session} quiz={quiz} quizId={quizId} totalPreguntas={questionsData.length} />
   if (finished) return <ResumenSesion {...resumenProps} esAnticipado={false} />
+  if (exitFinished && esInvitado) return <ResumenInvitado session={session} quiz={quiz} quizId={quizId} totalPreguntas={questionsData.length} />
   if (exitFinished) return <ResumenSesion {...resumenProps} esAnticipado={true} />
 
   const q = questions[current]
@@ -553,9 +651,12 @@ function EstudiarInner({ params }) {
   const someCorrect = confirmed && selected.some(id => correctIds.includes(id)) && !allCorrect
 
   return (
-    <div style={{ minHeight: '100vh', background: 'white', fontFamily: 'Arial, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: 'white', fontFamily: 'Arial, sans-serif', paddingBottom: esInvitado ? '70px' : '0' }}>
 
-      {showReport && (
+      {/* Banner publicitario fijo al pie — solo invitados */}
+      {esInvitado && <AdBanner position="fixed" />}
+
+      {showReport && !esInvitado && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
           <div style={{ background: 'white', borderRadius: '16px', padding: '24px', maxWidth: '380px', width: '90%' }}>
             <p style={{ fontSize: '15px', fontWeight: '500', color: '#111', marginBottom: '4px' }}>Reportar error en esta pregunta</p>
@@ -585,11 +686,12 @@ function EstudiarInner({ params }) {
           <div style={{ background: 'white', borderRadius: '16px', padding: '28px', maxWidth: '360px', width: '90%', textAlign: 'center' }}>
             <p style={{ fontSize: '16px', fontWeight: '500', color: '#111', marginBottom: '8px' }}>¿Terminar la sesión?</p>
             <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '20px' }}>
-              Completaste {session.correct + session.wrong + session.partial} de {questions.length} preguntas. Tu progreso se va a guardar.
+              Completaste {session.correct + session.wrong + session.partial} de {questions.length} preguntas.
+              {esInvitado ? ' Tu progreso no se guardará.' : ' Tu progreso se va a guardar.'}
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <button onClick={handleExit} style={{ padding: '10px', fontSize: '14px', fontWeight: '500', color: 'white', background: '#059669', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
-                Sí, guardar y terminar
+                {esInvitado ? 'Ver mis resultados' : 'Sí, guardar y terminar'}
               </button>
               <button onClick={() => setShowExitConfirm(false)} style={{ padding: '10px', fontSize: '14px', color: '#6b7280', background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', cursor: 'pointer' }}>
                 Seguir estudiando
@@ -608,15 +710,33 @@ function EstudiarInner({ params }) {
           <span style={{ color: '#059669', fontWeight: '500' }}>✓ {session.correct}</span>
           <span style={{ color: '#ef4444', fontWeight: '500' }}>✗ {session.wrong}</span>
           <span style={{ color: '#d97706', fontWeight: '500' }}>~ {session.partial}</span>
-          <button onClick={() => setShowExitConfirm(true)} style={{ fontSize: '12px', color: '#9ca3af', background: 'none', border: '1px solid #e5e7eb', padding: '5px 10px', borderRadius: '6px', cursor: 'pointer' }}>
-            Terminar
-          </button>
+          {esInvitado ? (
+            <a href="/dashboard" style={{ fontSize: '12px', fontWeight: '500', color: '#059669', background: '#f0fdf4', border: '1px solid #6ee7b7', padding: '5px 10px', borderRadius: '6px', textDecoration: 'none' }}>
+              Registrarse
+            </a>
+          ) : (
+            <button onClick={() => setShowExitConfirm(true)} style={{ fontSize: '12px', color: '#9ca3af', background: 'none', border: '1px solid #e5e7eb', padding: '5px 10px', borderRadius: '6px', cursor: 'pointer' }}>
+              Terminar
+            </button>
+          )}
         </div>
       </nav>
 
       <div style={{ height: '3px', background: '#f0f0f0' }}>
-        <div style={{ height: '100%', width: progress + '%', background: '#059669', transition: 'width 0.3s' }} />
+        <div style={{ height: '100%', width: progress + '%', background: esInvitado ? '#d97706' : '#059669', transition: 'width 0.3s' }} />
       </div>
+
+      {/* Banner invitado debajo de la barra de progreso */}
+      {esInvitado && (
+        <div style={{ background: '#fffbeb', borderBottom: '1px solid #fde68a', padding: '8px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: '12px', color: '#92400e' }}>
+            Modo invitado · Pregunta {current + 1} de {questions.length} · Progreso no guardado
+          </span>
+          <a href="/dashboard" style={{ fontSize: '12px', fontWeight: '500', color: '#059669', textDecoration: 'none' }}>
+            Crear cuenta gratis →
+          </a>
+        </div>
+      )}
 
       <div style={{ maxWidth: '560px', margin: '0 auto', padding: '32px 24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -628,7 +748,7 @@ function EstudiarInner({ params }) {
 
         <div style={{ fontSize: '17px', fontWeight: '500', color: '#111', lineHeight: '1.5', marginBottom: '8px' }}>{q.body}</div>
         <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '24px' }}>
-          {q.type === 'single' ? 'Selecciona una opcion y confirma.' : 'Selecciona todas las correctas y confirma.'}
+          {q.type === 'single' ? 'Seleccioná una opción y confirmá.' : 'Seleccioná todas las correctas y confirmá.'}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
@@ -668,21 +788,37 @@ function EstudiarInner({ params }) {
                 </>
               )}
             </div>
+
+            {/* Publicidad entre preguntas — solo invitados, cada 5 preguntas */}
+            {esInvitado && current > 0 && current % 5 === 0 && (
+              <AdBanner />
+            )}
+
             <button style={{ width: '100%', padding: '12px', fontSize: '14px', color: '#6b7280', background: 'white', border: '1px solid #e5e7eb', borderRadius: '10px', cursor: 'pointer', marginBottom: '8px' }} onClick={next}>
               {current + 1 >= questions.length ? 'Ver resultados' : 'Siguiente pregunta'}
             </button>
           </>
         )}
 
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '8px' }}>
-          {reportSent ? (
-            <span style={{ fontSize: '12px', color: '#059669' }}>Reporte enviado. Gracias.</span>
-          ) : (
-            <button onClick={() => setShowReport(true)} style={{ fontSize: '11px', color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
-              Reportar error en esta pregunta
-            </button>
-          )}
-        </div>
+        {!esInvitado && (
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '8px' }}>
+            {reportSent ? (
+              <span style={{ fontSize: '12px', color: '#059669' }}>Reporte enviado. Gracias.</span>
+            ) : (
+              <button onClick={() => setShowReport(true)} style={{ fontSize: '11px', color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
+                Reportar error en esta pregunta
+              </button>
+            )}
+          </div>
+        )}
+
+        {esInvitado && (
+          <div style={{ textAlign: 'center', marginTop: '8px' }}>
+            <a href="/dashboard" style={{ fontSize: '11px', color: '#059669', textDecoration: 'none' }}>
+              Registrate gratis para guardar tu progreso →
+            </a>
+          </div>
+        )}
       </div>
     </div>
   )

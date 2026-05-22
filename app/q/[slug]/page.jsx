@@ -15,7 +15,6 @@ function getLabels(type) {
 export async function generateMetadata({ params }) {
   const { slug } = await params
   const cookieStore = await cookies()
-
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -28,18 +27,10 @@ export async function generateMetadata({ params }) {
       }
     }
   )
-
-  const { data: quiz } = await supabase
-    .from('quizzes')
-    .select('title, description, notes, subject, faculty, question_count, users(username)')
-    .eq('slug', slug)
-    .single()
-
+  const { data: quiz } = await supabase.from('quizzes').select('title, description, notes, subject, faculty, question_count, users(username)').eq('slug', slug).single()
   if (!quiz) return { title: 'Quiz no encontrado — Memorepe' }
-
   const desc = quiz.description ||
     `${quiz.question_count} preguntas de ${quiz.subject || 'estudio'}${quiz.faculty ? ' · ' + quiz.faculty : ''}. Estudiá gratis con repetición espaciada en Memorepe.`
-
   return {
     title: quiz.title + ' — Memorepe',
     description: desc,
@@ -55,7 +46,6 @@ export async function generateMetadata({ params }) {
 export default async function QuizSlug({ params }) {
   const { slug } = await params
   const cookieStore = await cookies()
-
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -69,11 +59,7 @@ export default async function QuizSlug({ params }) {
     }
   )
 
-  const { data: quiz } = await supabase
-    .from('quizzes')
-    .select('*, users(username)')
-    .eq('slug', slug)
-    .single()
+  const { data: quiz } = await supabase.from('quizzes').select('*, users(username)').eq('slug', slug).single()
 
   if (!quiz || quiz.visibility === 'private') {
     return (
@@ -86,12 +72,7 @@ export default async function QuizSlug({ params }) {
     )
   }
 
-  const { data: questions } = await supabase
-    .from('questions')
-    .select('id, body, type')
-    .eq('quiz_id', quiz.id)
-    .order('order')
-    .limit(15)
+  const { data: questions } = await supabase.from('questions').select('id, body, type').eq('quiz_id', quiz.id).order('order').limit(15)
 
   const catColors = {
     derecho: { bg: '#e0f2fe', color: '#0369a1' },
@@ -203,22 +184,43 @@ export default async function QuizSlug({ params }) {
           </div>
         )}
 
+        {/* CTA principal — dos opciones */}
         <div style={{ background: '#f0fdf4', border: '1px solid #6ee7b7', borderRadius: '16px', padding: '28px', marginBottom: '40px', textAlign: 'center' }}>
           <div style={{ fontSize: '32px', marginBottom: '12px' }}>🎯</div>
           <h2 style={{ fontSize: '18px', fontWeight: '500', color: '#065f46', marginBottom: '8px' }}>
-            Estudiá este quiz gratis con repetición espaciada
+            Estudiá este quiz con repetición espaciada
           </h2>
-          <p style={{ fontSize: '14px', color: '#059669', lineHeight: '1.6', marginBottom: '20px', maxWidth: '420px', margin: '0 auto 20px' }}>
-            Memorepe usa un algoritmo científico que te muestra cada pregunta en el momento exacto antes de que la olvides. Estudias menos tiempo y retienes más.
+          <p style={{ fontSize: '14px', color: '#059669', lineHeight: '1.6', marginBottom: '24px', maxWidth: '420px', margin: '0 auto 24px' }}>
+            Memorepe usa un algoritmo científico que te muestra cada pregunta en el momento exacto antes de que la olvides.
           </p>
+
+          {/* Botón principal: registrado */}
           <a
             href={'/estudiar/' + quiz.id + '/inicio'}
-            style={{ display: 'inline-block', padding: '14px 32px', fontSize: '15px', fontWeight: '500', color: 'white', background: '#059669', borderRadius: '10px', textDecoration: 'none' }}
+            style={{ display: 'block', padding: '14px 32px', fontSize: '15px', fontWeight: '500', color: 'white', background: '#059669', borderRadius: '10px', textDecoration: 'none', marginBottom: '10px' }}
           >
             Empezar a estudiar gratis →
           </a>
-          <p style={{ fontSize: '12px', color: '#6ee7b7', marginTop: '12px' }}>
+          <p style={{ fontSize: '12px', color: '#059669', marginBottom: '16px' }}>
             Solo necesitás una cuenta de Google. Es gratis.
+          </p>
+
+          {/* Separador */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+            <div style={{ flex: 1, height: '1px', background: '#6ee7b7' }} />
+            <span style={{ fontSize: '12px', color: '#6ee7b7' }}>o</span>
+            <div style={{ flex: 1, height: '1px', background: '#6ee7b7' }} />
+          </div>
+
+          {/* Botón secundario: invitado */}
+          <a
+            href={'/estudiar/' + quiz.id + '?modo=invitado'}
+            style={{ display: 'block', padding: '12px 32px', fontSize: '13px', fontWeight: '500', color: '#065f46', background: 'white', border: '1px solid #6ee7b7', borderRadius: '10px', textDecoration: 'none' }}
+          >
+            Probar 20 preguntas sin registrarse
+          </a>
+          <p style={{ fontSize: '11px', color: '#9ca3af', marginTop: '8px' }}>
+            Sin cuenta · Sin progreso guardado · Con publicidad
           </p>
         </div>
 

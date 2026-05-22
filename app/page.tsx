@@ -26,8 +26,36 @@ export default async function Home() {
 
   const { data: { user } } = await supabase.auth.getUser()
   if (user) redirect('/dashboard')
+
+  // Banco destacado para modo invitado — el más popular o el que tenga más preguntas
+  let bancoDestacado = null
+  try {
+    const { data } = await supabase
+      .from('quizzes')
+      .select('id, title, slug, question_count, subject, category')
+      .eq('visibility', 'public')
+      .eq('featured', true)
+      .order('student_count', { ascending: false })
+      .limit(1)
+      .single()
+    bancoDestacado = data
+  } catch (e) {
+    // Si no hay featured, buscar el más estudiado
+    try {
+      const { data } = await supabase
+        .from('quizzes')
+        .select('id, title, slug, question_count, subject, category')
+        .eq('visibility', 'public')
+        .order('student_count', { ascending: false })
+        .limit(1)
+        .single()
+      bancoDestacado = data
+    } catch (e) {}
+  }
+
+  const urlInvitado = '/explorar'
+
   return (
-    
     <div style={{ minHeight: '100vh', background: 'white', fontFamily: 'Arial, sans-serif' }}>
 
       <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid #f0f0f0' }}>
@@ -43,6 +71,42 @@ export default async function Home() {
       {/* Hero con rotación en cliente */}
       <HeroRotativo />
 
+      {/* ── Probá ahora sin registrarte ── */}
+      <section style={{ maxWidth: '680px', margin: '0 auto', padding: '0 24px 56px' }}>
+        <div style={{ background: '#f0fdf4', border: '1px solid #6ee7b7', borderRadius: '16px', padding: '32px', textAlign: 'center' }}>
+          <div style={{ fontSize: '28px', marginBottom: '12px' }}>⚡</div>
+          <h2 style={{ fontSize: '20px', fontWeight: '500', color: '#065f46', marginBottom: '8px' }}>
+            Probá Memorepe ahora, sin registrarte
+          </h2>
+          <p style={{ fontSize: '14px', color: '#059669', lineHeight: '1.6', marginBottom: '24px', maxWidth: '460px', margin: '0 auto 24px' }}>
+            Respondé 20 preguntas reales y entendé cómo funciona el algoritmo. Sin cuenta, sin tarjeta, en segundos.
+          </p>
+
+          {bancoDestacado && (
+            <div style={{ background: 'white', border: '1px solid #6ee7b7', borderRadius: '10px', padding: '14px 16px', marginBottom: '20px', display: 'inline-flex', gap: '16px', alignItems: 'center' }}>
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontSize: '13px', fontWeight: '500', color: '#111' }}>{bancoDestacado.title}</div>
+                <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>
+                  {bancoDestacado.question_count} preguntas · {bancoDestacado.subject || bancoDestacado.category}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+            <a
+              href={urlInvitado}
+              style={{ display: 'inline-block', padding: '14px 40px', fontSize: '15px', fontWeight: '500', color: 'white', background: '#059669', borderRadius: '10px', textDecoration: 'none' }}
+            >
+              Empezar sin registrarse →
+            </a>
+            <span style={{ fontSize: '12px', color: '#9ca3af' }}>
+              Sin cuenta · 20 preguntas · Con publicidad
+            </span>
+          </div>
+        </div>
+      </section>
+
       {/* 3 cajas */}
       <section style={{ maxWidth: '720px', margin: '0 auto', padding: '0 24px 64px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
@@ -50,12 +114,12 @@ export default async function Home() {
             {
               icon: '🧠',
               titulo: 'El algoritmo trabaja por ti',
-              desc: 'Cada vez que estudias, el sistema aprende cómo aprendes y ajusta qué repasar al día siguiente.',
+              desc: 'Cada vez que estudiás, el sistema aprende cómo aprendés y ajusta qué repasar al día siguiente.',
             },
             {
               icon: '📅',
-              titulo: 'Planifica tu examen',
-              desc: 'Carga tu fecha de examen y Memorepe te dice cuánto estudiar cada día para llegar preparado.',
+              titulo: 'Planificá tu examen',
+              desc: 'Cargá tu fecha de examen y Memorepe te dice cuánto estudiar cada día para llegar preparado.',
             },
             {
               icon: '📚',
@@ -76,7 +140,7 @@ export default async function Home() {
       <section style={{ maxWidth: '640px', margin: '0 auto', padding: '0 24px 80px' }}>
         <p style={{ fontSize: '11px', fontWeight: '500', color: '#059669', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>Por qué Memorepe</p>
         <h2 style={{ fontSize: '24px', fontWeight: '500', color: '#111', marginBottom: '8px' }}>No es un testeador. Es un sistema de aprendizaje.</h2>
-        <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '32px' }}>La diferencia está en qué pasa después de que respondes.</p>
+        <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '32px' }}>La diferencia está en qué pasa después de que respondés.</p>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           {[
             {
@@ -84,16 +148,16 @@ export default async function Home() {
               desc: 'No es azar ni orden fijo. El sistema decide qué estudiar hoy basándose en tu historial personal de respuestas.',
             },
             {
-              titulo: 'Conoce tu progreso real',
-              desc: 'Cada pregunta tiene un estado: vista, en progreso, dominada o experta. Siempre sabes dónde estás parado.',
+              titulo: 'Conocé tu progreso real',
+              desc: 'Cada pregunta tiene un estado: vista, en progreso, dominada o experta. Siempre sabés dónde estás parado.',
             },
             {
-              titulo: 'Planifica tu examen',
-              desc: 'Ingresa la fecha de tu parcial y el sistema calcula cuánto estudiar por día para llegar sin sorpresas.',
+              titulo: 'Planificá tu examen',
+              desc: 'Ingresá la fecha de tu parcial y el sistema calcula cuánto estudiar por día para llegar sin sorpresas.',
             },
             {
               titulo: 'Banco de preguntas de la comunidad',
-              desc: 'Accede a preguntas de opción múltiple creadas por estudiantes universitarios de toda la región.',
+              desc: 'Accedé a preguntas de opción múltiple creadas por estudiantes universitarios de toda la región.',
             },
           ].map(f => (
             <div key={f.titulo} style={{ border: '1px solid #f0f0f0', borderRadius: '12px', padding: '20px' }}>
