@@ -3,7 +3,7 @@ title: "Técnica Pomodoro + SM-2: la combo perfecta para dominar cualquier exame
 slug: "pomodoro-sm2-combo-perfecta-para-examenes"
 date: "2026-05-23"
 excerpt: "Estudiar más tiempo no garantiza mejores resultados. Combiná Pomodoro y SM-2 para multiplicar tu retención sin quemarte en el intento."
-image: "/blog/recuperacion-activa-vs-pasiva.svg"
+image: "/blog/pomodoro-sm2-portada.png"
 ---
 
 Estudiar no es solo cuestión de horas sentado frente a un libro. De hecho, estudiar más tiempo no garantiza mejores resultados. La clave está en cómo usás ese tiempo. Y después de años analizando métodos de aprendizaje, hay una combinación que destaca por encima de todas: la Técnica Pomodoro — para mantener el foco — más el algoritmo SM-2 — para fijar el conocimiento a largo plazo.
@@ -22,6 +22,8 @@ No es culpa tuya. Es culpa de un sistema de estudio lineal, pensado para llenar 
 
 La Técnica Pomodoro es simple: trabajás 25 minutos, descansás 5. Cada 4 ciclos, un descanso de 15 a 20 minutos.
 
+![Ciclo Pomodoro](/blog/pomodoro-ciclo.svg)
+
 Parece trivial, pero la neurociencia lo respalda. Nuestro cerebro no está diseñado para mantener la atención plena más de 20 o 30 minutos seguidos. Los microdescansos previenen la fatiga mental, reinician la capacidad de concentración y reducen la ansiedad por "no avanzar rápido".
 
 Hoy mismo, en lugar de estudiar 2 horas de corrido, probá 4 bloques de 25 minutos con sus respectivos descansos. Notarás la diferencia desde el primer día.
@@ -32,11 +34,15 @@ SM-2 es un algoritmo de **repetición espaciada** creado en los años 80 para si
 
 Si repasás demasiado pronto, perdés tiempo. Si repasás demasiado tarde, ya lo habías olvidado. SM-2 encuentra el punto medio perfecto.
 
+![Curva del olvido con SM-2](/blog/pomodoro-curva-olvido.svg)
+
 Con la misma cantidad de horas de estudio, multiplicás tu retención por 2, 3 o hasta 5 veces, según los estudios clásicos de Piotr Woźniak.
 
 ## Por qué Pomodoro + SM-2 son la combo perfecta
 
 Ambas técnicas se potencian mutuamente. La Técnica Pomodoro gestiona la atención y evita el agotamiento diario — es ideal para estudiar contenido nuevo. El algoritmo SM-2 gestiona la memoria y evita el olvido semanal — es ideal para repasar contenido viejo.
+
+![Pomodoro vs SM-2](/blog/pomodoro-vs-sm2.svg)
 
 En conjunto: usás los Pomodoros para aprender o repasar activamente respondiendo preguntas, y SM-2 te dice qué tenés que repasar en cada bloque. El resultado es un plan de estudio personalizado, sin pérdidas de tiempo y con una tasa de retención que parece magia.
 
