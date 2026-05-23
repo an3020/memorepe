@@ -1,0 +1,26 @@
+<svg width="100%" viewBox="0 0 680 200" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Pomodoro vs SM-2</title>
+  <desc>Tabla comparativa entre la Técnica Pomodoro y el algoritmo SM-2 mostrando qué gestiona cada una</desc>
+
+  <rect x="80" y="30" width="220" height="44" rx="8" fill="#d1fae5" stroke="#6ee7b7" stroke-width="0.5"/>
+  <text x="190" y="58" font-family="Arial, sans-serif" font-size="14" font-weight="500" fill="#065f46" text-anchor="middle">técnica pomodoro</text>
+
+  <text x="340" y="58" font-family="Arial, sans-serif" font-size="14" font-weight="500" fill="#9ca3af" text-anchor="middle">vs</text>
+
+  <rect x="380" y="30" width="220" height="44" rx="8" fill="#e0f2fe" stroke="#7dd3fc" stroke-width="0.5"/>
+  <text x="490" y="58" font-family="Arial, sans-serif" font-size="14" font-weight="500" fill="#0369a1" text-anchor="middle">algoritmo SM-2</text>
+
+  <line x1="80" y1="118" x2="300" y2="118" stroke="#f0f0f0" stroke-width="0.5" fill="none"/>
+  <line x1="380" y1="118" x2="600" y2="118" stroke="#f0f0f0" stroke-width="0.5" fill="none"/>
+  <line x1="80" y1="145" x2="300" y2="145" stroke="#f0f0f0" stroke-width="0.5" fill="none"/>
+  <line x1="380" y1="145" x2="600" y2="145" stroke="#f0f0f0" stroke-width="0.5" fill="none"/>
+
+  <text x="190" y="108" font-family="Arial, sans-serif" font-size="14" fill="#374151" text-anchor="middle">gestiona la atención</text>
+  <text x="490" y="108" font-family="Arial, sans-serif" font-size="14" fill="#374151" text-anchor="middle">gestiona la memoria</text>
+
+  <text x="190" y="135" font-family="Arial, sans-serif" font-size="12" fill="#6b7280" text-anchor="middle">evita el agotamiento diario</text>
+  <text x="490" y="135" font-family="Arial, sans-serif" font-size="12" fill="#6b7280" text-anchor="middle">evita el olvido semanal</text>
+
+  <text x="190" y="162" font-family="Arial, sans-serif" font-size="12" fill="#6b7280" text-anchor="middle">ideal para aprender cosas nuevas</text>
+  <text x="490" y="162" font-family="Arial, sans-serif" font-size="12" fill="#6b7280" text-anchor="middle">ideal para repasar lo ya visto</text>
+</svg>

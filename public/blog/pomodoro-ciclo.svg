@@ -1,0 +1,44 @@
+<svg width="100%" viewBox="0 0 680 200" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Ciclo Pomodoro</title>
+  <desc>Diagrama que muestra la alternancia de bloques de trabajo de 25 minutos y descansos de 5 minutos en la Técnica Pomodoro</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <rect x="40" y="60" width="110" height="60" rx="8" fill="#d1fae5" stroke="#6ee7b7" stroke-width="0.5"/>
+  <text x="95" y="86" font-family="Arial, sans-serif" font-size="14" font-weight="500" fill="#065f46" text-anchor="middle">25 min</text>
+  <text x="95" y="106" font-family="Arial, sans-serif" font-size="12" fill="#059669" text-anchor="middle">trabajo</text>
+
+  <line x1="154" y1="90" x2="172" y2="90" stroke="#6b7280" stroke-width="0.5" marker-end="url(#arrow)" fill="none"/>
+
+  <rect x="176" y="60" width="80" height="60" rx="8" fill="#fef3c7" stroke="#fde68a" stroke-width="0.5"/>
+  <text x="216" y="86" font-family="Arial, sans-serif" font-size="14" font-weight="500" fill="#92400e" text-anchor="middle">5 min</text>
+  <text x="216" y="106" font-family="Arial, sans-serif" font-size="12" fill="#92400e" text-anchor="middle">descanso</text>
+
+  <line x1="260" y1="90" x2="278" y2="90" stroke="#6b7280" stroke-width="0.5" marker-end="url(#arrow)" fill="none"/>
+
+  <rect x="282" y="60" width="110" height="60" rx="8" fill="#d1fae5" stroke="#6ee7b7" stroke-width="0.5"/>
+  <text x="337" y="86" font-family="Arial, sans-serif" font-size="14" font-weight="500" fill="#065f46" text-anchor="middle">25 min</text>
+  <text x="337" y="106" font-family="Arial, sans-serif" font-size="12" fill="#059669" text-anchor="middle">trabajo</text>
+
+  <line x1="396" y1="90" x2="414" y2="90" stroke="#6b7280" stroke-width="0.5" marker-end="url(#arrow)" fill="none"/>
+
+  <rect x="418" y="60" width="80" height="60" rx="8" fill="#fef3c7" stroke="#fde68a" stroke-width="0.5"/>
+  <text x="458" y="86" font-family="Arial, sans-serif" font-size="14" font-weight="500" fill="#92400e" text-anchor="middle">5 min</text>
+  <text x="458" y="106" font-family="Arial, sans-serif" font-size="12" fill="#92400e" text-anchor="middle">descanso</text>
+
+  <line x1="502" y1="90" x2="520" y2="90" stroke="#6b7280" stroke-width="0.5" marker-end="url(#arrow)" fill="none"/>
+
+  <rect x="524" y="60" width="116" height="60" rx="8" fill="#e0f2fe" stroke="#7dd3fc" stroke-width="0.5"/>
+  <text x="582" y="86" font-family="Arial, sans-serif" font-size="14" font-weight="500" fill="#0369a1" text-anchor="middle">15–20 min</text>
+  <text x="582" y="106" font-family="Arial, sans-serif" font-size="12" fill="#0369a1" text-anchor="middle">descanso largo</text>
+
+  <rect x="40" y="148" width="14" height="14" rx="3" fill="#059669"/>
+  <text x="60" y="160" font-family="Arial, sans-serif" font-size="12" fill="#6b7280">trabajo (25 min)</text>
+  <rect x="200" y="148" width="14" height="14" rx="3" fill="#d97706"/>
+  <text x="220" y="160" font-family="Arial, sans-serif" font-size="12" fill="#6b7280">descanso corto (5 min)</text>
+  <rect x="400" y="148" width="14" height="14" rx="3" fill="#0369a1"/>
+  <text x="420" y="160" font-family="Arial, sans-serif" font-size="12" fill="#6b7280">descanso largo (cada 4 ciclos)</text>
+</svg>
