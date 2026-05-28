@@ -190,6 +190,8 @@ export default async function Explorar({ searchParams }) {
                 ? '/estudiar/' + quiz.id + '/inicio'
                 : '/estudiar/' + quiz.id + '?modo=invitado'
 
+              const esMio = user && quiz.user_id === user.id
+
               return (
                 <div key={quiz.id} style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column' }}>
 
@@ -249,6 +251,11 @@ export default async function Explorar({ searchParams }) {
                     </div>
                     <div style={{ display: 'flex', gap: '6px' }}>
                       <ModalQuiz quiz={quiz} progressMap={progressMap} />
+                      {esMio && (
+                        <a href={'/quiz/' + quiz.id + '/gestionar'} style={{ fontSize: '12px', fontWeight: '500', color: '#6b7280', background: 'white', border: '1px solid #e5e7eb', padding: '5px 12px', borderRadius: '6px', textDecoration: 'none' }}>
+                          Gestionar
+                        </a>
+                      )}
                       <a href={urlEstudiar} style={{ fontSize: '12px', fontWeight: '500', color: '#065f46', background: '#d1fae5', border: '1px solid #6ee7b7', padding: '5px 12px', borderRadius: '6px', textDecoration: 'none' }}>
                         {tieneProgreso ? 'Continuar' : 'Estudiar'}
                       </a>

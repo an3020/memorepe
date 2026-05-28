@@ -252,6 +252,15 @@ export default function GestionarQuiz({ params }) {
     setTimeout(() => setMsg(''), 3000)
   }
 
+  async function resolveReport(reportId) {
+    await supabase.from('question_reports')
+      .update({ status: 'resolved' })
+      .eq('id', reportId)
+    setReports(reports.map(r => r.id === reportId ? { ...r, status: 'resolved' } : r))
+    setMsg('Reporte marcado como resuelto.')
+    setTimeout(() => setMsg(''), 3000)
+  }
+
   async function deleteQuiz() {
     await supabase.from('quizzes').delete().eq('id', quizId)
     router.push('/dashboard')
