@@ -44,7 +44,7 @@ export default async function AdminReportes() {
 
   const { data: reportes } = await admin
     .from('question_reports')
-    .select('*, questions(body, quiz_id), quizzes(title, users(username))')
+    .select('*, questions(body, quiz_id), quizzes(title, users(username)), users(username, email)')
     .order('created_at', { ascending: false })
 
   const pendientes = (reportes || []).filter(r => r.status === 'pending')
