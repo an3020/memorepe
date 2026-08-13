@@ -40,19 +40,22 @@ export default function AdminReportesClient({ pendientes, resueltos }) {
     return (
       <div style={{ background: '#1a1a1a', border: '1px solid', borderColor: acciones ? '#ef4444' : '#222', borderRadius: '10px', padding: '14px 16px', marginBottom: '10px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-          <div>
+          <div style={{ flex: 1 }}>
             <div style={{ fontSize: '13px', fontWeight: '500', color: acciones ? '#ef4444' : '#6b7280', marginBottom: '4px' }}>{r.reason}</div>
-            <div style={{ fontSize: '11px', color: '#6b7280' }}>
-              Quiz: <a href={'/admin/quizzes/' + r.quiz_id} target="_blank" style={{ color: '#059669', textDecoration: 'none' }}>{r.quizzes?.title}</a>
-              {' · '}@{r.quizzes?.users?.username}
-              {' · '}{timeAgo(r.created_at)}
+            <div style={{ fontSize: '11px', color: '#6b7280', lineHeight: '1.6' }}>
+              <span>Quiz: <a href={'/admin/quizzes/' + r.quiz_id} target="_blank" style={{ color: '#059669', textDecoration: 'none' }}>{r.quizzes?.title}</a></span>
+              <span> · autor: @{r.quizzes?.users?.username}</span>
+              <span> · {timeAgo(r.created_at)}</span>
+              {r.users?.username && (
+                <span> · reportado por <span style={{ color: '#d97706' }}>@{r.users.username}</span></span>
+              )}
             </div>
           </div>
           {acciones && (
             <button
               onClick={() => resolver(r.id)}
               disabled={loading === r.id}
-              style={{ fontSize: '11px', color: '#059669', background: '#052e16', border: '1px solid #059669', borderRadius: '6px', padding: '5px 12px', cursor: 'pointer', flexShrink: 0 }}
+              style={{ fontSize: '11px', color: '#059669', background: '#052e16', border: '1px solid #059669', borderRadius: '6px', padding: '5px 12px', cursor: 'pointer', flexShrink: 0, marginLeft: '12px' }}
             >
               {loading === r.id ? '...' : 'Resolver'}
             </button>
@@ -79,29 +82,29 @@ export default function AdminReportesClient({ pendientes, resueltos }) {
         </div>
       )}
 
-      {/* Pendientes */}
       {listaPendientes.length === 0 ? (
-        <div style={{ background: '#1a1a1a', borderRadius: '12px', padding: '40px', textAlign: 'center', border: '1px solid #222', marginBottom: '16px' }}>
-          <p style={{ fontSize: '14px', color: '#059669' }}>✓ Sin reportes pendientes</p>
+        <div style={{ textAlign: 'center', padding: '48px 24px', border: '1px dashed #222', borderRadius: '12px' }}>
+          <p style={{ fontSize: '14px', color: '#6b7280' }}>No hay reportes pendientes.</p>
         </div>
       ) : (
-        listaPendientes.map(r => <ReporteCard key={r.id} r={r} acciones={true} />)
+        <div style={{ marginBottom: '32px' }}>
+          {listaPendientes.map(r => (
+            <ReporteCard key={r.id} r={r} acciones={true} />
+          ))}
+        </div>
       )}
 
-      {/* Resueltos */}
-      <button
-        onClick={() => setMostrarResueltos(!mostrarResueltos)}
-        style={{ fontSize: '12px', color: '#6b7280', background: 'none', border: '1px solid #222', borderRadius: '6px', padding: '6px 14px', cursor: 'pointer', marginTop: '8px' }}
-      >
-        <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '4px' }}>
-          Reportado por: <span style={{ color: '#059669' }}>@{r.users?.username || r.users?.email || 'usuario desconocido'}</span>
-        </div>
-        {mostrarResueltos ? 'Ocultar' : 'Ver'} resueltos ({listaResueltos.length})
-      </button>
-
-      {mostrarResueltos && (
-        <div style={{ marginTop: '16px', opacity: 0.6 }}>
-          {listaResueltos.map(r => <ReporteCard key={r.id} r={r} acciones={false} />)}
+      {listaResueltos.length > 0 && (
+        <div>
+          <button
+            onClick={() => setMostrarResueltos(!mostrarResueltos)}
+            style={{ fontSize: '13px', color: '#6b7280', background: 'none', border: '1px solid #222', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', marginBottom: '16px' }}
+          >
+            {mostrarResueltos ? 'Ocultar' : 'Ver'} resueltos ({listaResueltos.length})
+          </button>
+          {mostrarResueltos && listaResueltos.map(r => (
+            <ReporteCard key={r.id} r={r} acciones={false} />
+          ))}
         </div>
       )}
     </div>
