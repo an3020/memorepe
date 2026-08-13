@@ -93,6 +93,9 @@ export default function AdminReportesClient({ pendientes, resueltos }) {
         onClick={() => setMostrarResueltos(!mostrarResueltos)}
         style={{ fontSize: '12px', color: '#6b7280', background: 'none', border: '1px solid #222', borderRadius: '6px', padding: '6px 14px', cursor: 'pointer', marginTop: '8px' }}
       >
+        <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '4px' }}>
+          Reportado por: <span style={{ color: '#059669' }}>@{r.users?.username || r.users?.email || 'usuario desconocido'}</span>
+        </div>
         {mostrarResueltos ? 'Ocultar' : 'Ver'} resueltos ({listaResueltos.length})
       </button>
 
