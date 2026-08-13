@@ -34,7 +34,7 @@ export default async function AdminFeedback({ searchParams }) {
 
   const { data: feedbacks, count } = await supabase
     .from('feedback')
-    .select('*, users(email, username)', { count: 'exact' })
+    .select('*, users(email, username, full_name)', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)
 
@@ -78,7 +78,7 @@ export default async function AdminFeedback({ searchParams }) {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
                     <div>
                       <span style={{ fontSize: '12px', fontWeight: '500', color: '#059669' }}>
-                        {fb.users?.username ? '@' + fb.users.username : fb.users?.email || 'Usuario anónimo'}
+                        {fb.users?.username ? '@' + fb.users.username : fb.users?.full_name || fb.users?.email || 'Usuario anónimo'}
                       </span>
                       <span style={{ fontSize: '11px', color: '#9ca3af', marginLeft: '10px' }}>
                         {timeAgo(fb.created_at)}
