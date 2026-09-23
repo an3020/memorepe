@@ -73,6 +73,7 @@ function EstudiarInner({ params }) {
   const [reportSending, setReportSending] = useState(false)
   const [sessionDoneIds, setSessionDoneIds] = useState(new Set())
   const [wrongAnswers, setWrongAnswers] = useState([])
+  const [sessionStartTime] = useState(Date.now())
 
   useEffect(() => {
     async function load() {
@@ -191,13 +192,14 @@ function EstudiarInner({ params }) {
   }
 
   async function finishSession(correct, wrong, partial) {
-    if (!sessionId) return
-    const xp = correct * 10 + partial * 4
-    await supabase.from('study_sessions')
-      .update({ finished_at: new Date().toISOString(), correct, wrong, partial, xp_earned: xp })
-      .eq('id', sessionId)
-    await supabase.rpc('update_streak', { p_user_id: userId })
-  }
+  if (!sessionId) return
+  const xp = correct * 10 + partial * 4
+  const duration_seconds = Math.round((Date.now() - sessionStartTime) / 1000)
+  await supabase.from('study_sessions')
+    .update({ finished_at: new Date().toISOString(), correct, wrong, partial, xp_earned: xp, duration_seconds })
+    .eq('id', sessionId)
+  await supabase.rpc('update_streak', { p_user_id: userId })
+}
 
   async function next() {
     if (current + 1 >= questions.length) {
