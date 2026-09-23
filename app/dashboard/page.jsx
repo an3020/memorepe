@@ -128,7 +128,7 @@ export default async function Dashboard({ searchParams }) {
   // Solo las sesiones recientes (para racha semanal y últimos estudiados)
   const { data: sessions } = await supabase
     .from('study_sessions')
-    .select('quiz_id, finished_at')
+    .select('quiz_id, finished_at, correct, wrong, partial, duration_seconds')
     .eq('user_id', user.id)
     .not('finished_at', 'is', null)
     .order('finished_at', { ascending: false })
@@ -153,6 +153,12 @@ export default async function Dashboard({ searchParams }) {
   const precision = totalRespondidas > 0 ? Math.round((totalCorrectas / totalRespondidas) * 100) : null
 
   const hace15diasStr = sumarDias(today, -15)
+
+  // Resumen de hoy (hora Argentina)
+  const sesionesHoy = (sessions || []).filter(s => s.finished_at && fechaAR(s.finished_at) === today)
+  const preguntasHoy = sesionesHoy.reduce((sum, s) => sum + (s.correct || 0) + (s.wrong || 0) + (s.partial || 0), 0)
+  const segundosHoy = sesionesHoy.reduce((sum, s) => sum + (s.duration_seconds || 0), 0)
+  const minutosHoy = Math.round(segundosHoy / 60)
 
   const diasSemana = ['D', 'L', 'M', 'X', 'J', 'V', 'S']
   const ultimos7 = Array.from({ length: 7 }, (_, i) => sumarDias(today, i - 6))
@@ -266,9 +272,14 @@ export default async function Dashboard({ searchParams }) {
       <div style={{ maxWidth: '720px', margin: '0 auto', padding: '32px 24px' }}>
 
         {/* Saludo */}
-        <h1 style={{ fontSize: '20px', fontWeight: '500', color: '#111', marginBottom: '16px' }}>
+        <h1 style={{ fontSize: '20px', fontWeight: '500', color: '#111', marginBottom: '4px' }}>
           Buen día, {nombre}.
         </h1>
+        <p style={{ fontSize: '13px', color: preguntasHoy > 0 ? '#059669' : '#9ca3af', margin: '0 0 16px 0' }}>
+          {preguntasHoy > 0
+            ? 'Hoy: ' + preguntasHoy.toLocaleString('es-AR') + (preguntasHoy === 1 ? ' pregunta' : ' preguntas') + (minutosHoy > 0 ? ' · ' + minutosHoy + ' min' : '')
+            : 'Hoy todavía no estudiaste.'}
+        </p>
 
         {/* Stats 2x2 + Buscador */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
