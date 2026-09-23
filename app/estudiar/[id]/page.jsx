@@ -73,7 +73,8 @@ function EstudiarInner({ params }) {
   const [reportSending, setReportSending] = useState(false)
   const [sessionDoneIds, setSessionDoneIds] = useState(new Set())
   const [wrongAnswers, setWrongAnswers] = useState([])
-  const [sessionStartTime] = useState(Date.now())
+  const [sessionStartTime, setSessionStartTime] = useState(Date.now())
+  const [durationSeconds, setDurationSeconds] = useState(0)
 
   useEffect(() => {
     async function load() {
@@ -195,11 +196,12 @@ function EstudiarInner({ params }) {
   if (!sessionId) return
   const xp = correct * 10 + partial * 4
   const duration_seconds = Math.round((Date.now() - sessionStartTime) / 1000)
+  setDurationSeconds(duration_seconds)
   await supabase.from('study_sessions')
     .update({ finished_at: new Date().toISOString(), correct, wrong, partial, xp_earned: xp, duration_seconds })
     .eq('id', sessionId)
   await supabase.rpc('update_streak', { p_user_id: userId })
-}
+} 
 
   async function next() {
     if (current + 1 >= questions.length) {
@@ -249,6 +251,8 @@ function EstudiarInner({ params }) {
     setFinished(false)
     setReportSent(false)
     setWrongAnswers([])
+    setSessionStartTime(Date.now())
+    setDurationSeconds(0)
   }
 
   async function sendReport() {
@@ -309,7 +313,9 @@ function EstudiarInner({ params }) {
         <div style={{ maxWidth: '480px', margin: '0 auto', padding: '48px 24px', textAlign: 'center' }}>
           <div style={{ fontSize: '48px', marginBottom: '16px' }}>{pct >= 80 ? '🎯' : pct >= 50 ? '📈' : '💪'}</div>
           <h1 style={{ fontSize: '22px', fontWeight: '500', color: '#111', marginBottom: '4px' }}>{modoNombre} completado</h1>
-          <p style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '28px' }}>{quiz?.title} · {total} preguntas</p>
+          <p style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '28px' }}>
+            {quiz?.title} · {total} preguntas{durationSeconds > 0 ? ' · ' + (durationSeconds < 60 ? durationSeconds + ' seg' : Math.round(durationSeconds / 60) + ' min') : ''}
+          </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '16px' }}>
             <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '14px' }}>
               <div style={{ fontSize: '24px', fontWeight: '500', color: '#059669' }}>{session.correct}</div>

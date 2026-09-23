@@ -43,6 +43,17 @@ function getNivel(xp) {
   return { nivel: Math.max(1, nivel), nombre, pct, xpFin, xpEnNivel: Math.max(0, xpEnNivel) }
 }
 
+// Fechas en hora de Argentina (el servidor de Vercel corre en UTC)
+const TZ = 'America/Argentina/Buenos_Aires'
+function fechaAR(date) {
+  return new Date(date).toLocaleDateString('en-CA', { timeZone: TZ })
+}
+function sumarDias(ymd, n) {
+  const d = new Date(ymd + 'T12:00:00Z')
+  d.setUTCDate(d.getUTCDate() + n)
+  return d.toISOString().split('T')[0]
+}
+
 function capitalize(str) {
   if (!str) return ''
   return str.charAt(0).toUpperCase() + str.slice(1)
@@ -112,44 +123,47 @@ export default async function Dashboard({ searchParams }) {
       )
     : favorites || []
 
+  const today = fechaAR(new Date())
+
+  // Solo las sesiones recientes (para racha semanal y últimos estudiados)
   const { data: sessions } = await supabase
     .from('study_sessions')
-    .select('*')
+    .select('quiz_id, finished_at')
     .eq('user_id', user.id)
     .not('finished_at', 'is', null)
     .order('finished_at', { ascending: false })
+    .limit(1000)
+
+  // Totales calculados en la base, sin tope de filas
+  const { data: statsData, error: statsError } = await supabase
+    .rpc('get_user_stats', { p_user_id: user.id })
+  const stats = Array.isArray(statsData) ? statsData[0] : statsData
 
   const { data: exams } = await supabase
     .from('exams')
     .select('*, exam_quizzes(quiz_id)')
     .eq('user_id', user.id)
     .eq('status', 'active')
-    .gte('exam_date', new Date().toISOString().split('T')[0])
+    .gte('exam_date', today)
     .order('exam_date', { ascending: true })
 
-  const totalCorrect = sessions?.reduce((sum, s) => sum + (s.correct || 0), 0) || 0
-  const totalQuestions = sessions?.reduce((sum, s) => sum + (s.total_questions || 0), 0) || 0
-  const precision = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : null
+  const totalSesiones = !statsError && stats ? Number(stats.sesiones) : (sessions?.length || 0)
+  const totalCorrectas = Number(stats?.correctas || 0)
+  const totalRespondidas = Number(stats?.respondidas || 0)
+  const precision = totalRespondidas > 0 ? Math.round((totalCorrectas / totalRespondidas) * 100) : null
 
-  const today = new Date().toISOString().split('T')[0]
-  const hace15dias = new Date()
-  hace15dias.setDate(hace15dias.getDate() - 15)
-  const hace15diasStr = hace15dias.toISOString().split('T')[0]
+  const hace15diasStr = sumarDias(today, -15)
 
   const diasSemana = ['D', 'L', 'M', 'X', 'J', 'V', 'S']
-  const ultimos7 = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date()
-    d.setDate(d.getDate() - (6 - i))
-    return d.toISOString().split('T')[0]
-  })
+  const ultimos7 = Array.from({ length: 7 }, (_, i) => sumarDias(today, i - 6))
   const diasConActividad = new Set(
-    sessions?.map(s => s.finished_at?.split('T')[0]).filter(Boolean)
+    (sessions || []).filter(s => s.finished_at).map(s => fechaAR(s.finished_at))
   )
 
   // Quizzes estudiados en los últimos 15 días
   const recentSessionQuizIds = [...new Set(
     (sessions || [])
-      .filter(s => s.finished_at && s.finished_at.split('T')[0] >= hace15diasStr)
+      .filter(s => s.finished_at && fechaAR(s.finished_at) >= hace15diasStr)
       .map(s => s.quiz_id)
   )]
 
@@ -269,7 +283,7 @@ export default async function Dashboard({ searchParams }) {
             </div>
             <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '12px' }}>
               <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '4px' }}>Sesiones</div>
-              <div style={{ fontSize: '20px', fontWeight: '500', color: '#059669' }}>{sessions?.length || 0}</div>
+              <div style={{ fontSize: '20px', fontWeight: '500', color: '#059669' }}>{totalSesiones.toLocaleString('es-AR')}</div>
             </div>
             <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '12px' }}>
               <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '4px' }}>Precisión</div>
