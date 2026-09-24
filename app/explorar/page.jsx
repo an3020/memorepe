@@ -68,6 +68,11 @@ export default async function Explorar({ searchParams }) {
     quizzes = data || []
   }
 
+  // Registrar la búsqueda (admin: qué busca la gente y qué no encuentra)
+  if (busqueda && !esBusquedaAutor) {
+    await supabase.rpc('log_search', { p_q: busqueda, p_resultados: quizzes.length, p_categoria: categoria || null })
+  }
+
   let progressMap = {}
   if (user && quizzes.length > 0) {
     const quizIds = quizzes.map(q => q.id)

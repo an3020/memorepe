@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import PrivacyBanner from "@/app/components/PrivacyBanner";
 import ScrollToTop from "@/app/components/ScrollToTop";
+import OrigenTracker from "@/app/components/OrigenTracker";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,6 +34,7 @@ export default function RootLayout({
         {children}
         <PrivacyBanner />
         <ScrollToTop />
+        <OrigenTracker />
       </body>
     </html>
   );

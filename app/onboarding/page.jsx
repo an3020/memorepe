@@ -95,6 +95,19 @@ export default function Onboarding() {
       return
     }
 
+    // Guardar de dónde vino (primera página que visitó), si lo tenemos
+    try {
+      const c = document.cookie.split('; ').find(x => x.startsWith('mr_origen='))
+      if (c) {
+        const o = JSON.parse(decodeURIComponent(c.slice('mr_origen='.length)))
+        await supabase.from('users').update({
+          origen_path: o.p || null,
+          origen_referrer: o.r || null,
+          origen_utm: o.u || null,
+        }).eq('id', user.id)
+      }
+    } catch (e) {}
+
     router.push('/dashboard')
   }
 
