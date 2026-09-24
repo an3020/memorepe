@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: '/',
       disallow: ['/dashboard', '/perfil', '/crear-quiz', '/onboarding'],
     },
-    sitemap: 'https://memorepe.vercel.app/sitemap.xml',
+    sitemap: 'https://memorepe.com/sitemap.xml',
   }
 }

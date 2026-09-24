@@ -34,6 +34,7 @@ export async function generateMetadata({ params }) {
   return {
     title: quiz.title + ' — Memorepe',
     description: desc,
+    alternates: { canonical: 'https://memorepe.com/q/' + slug },
     openGraph: {
       title: quiz.title + ' — Memorepe',
       description: desc,

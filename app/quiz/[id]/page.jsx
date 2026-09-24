@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { permanentRedirect } from 'next/navigation'
 
 function getLabels(type) {
   const map = {
@@ -85,6 +86,9 @@ export default async function QuizPublico({ params }) {
       </div>
     )
   }
+
+  // La página pública canónica es /q/[slug]: si el banco tiene slug, redirigir (308)
+  if (quiz.slug) permanentRedirect('/q/' + quiz.slug)
 
   const { data: questions } = await supabase
     .from('questions')

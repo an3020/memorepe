@@ -206,9 +206,9 @@ export default async function Explorar({ searchParams }) {
                     </span>
                   </div>
 
-                  <div style={{ fontSize: '14px', fontWeight: '500', color: '#111', marginBottom: '4px', lineHeight: '1.3' }}>
+                  <a href={quiz.slug ? '/q/' + quiz.slug : '/quiz/' + quiz.id} style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#111', marginBottom: '4px', lineHeight: '1.3', textDecoration: 'none' }}>
                     {quiz.title}
-                  </div>
+                  </a>
 
                   {metaParts.length > 0 && (
                     <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '10px', lineHeight: '1.5' }}>
