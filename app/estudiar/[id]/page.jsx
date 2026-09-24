@@ -440,6 +440,14 @@ function EstudiarInner({ params }) {
           </span>
         </div>
 
+        {q.image_url && (
+          <img
+            src={q.image_url}
+            alt="Imagen de la pregunta"
+            loading="eager"
+            style={{ display: 'block', maxWidth: '100%', maxHeight: '340px', objectFit: 'contain', margin: '0 auto 16px', borderRadius: '10px', border: '1px solid #f0f0f0' }}
+          />
+        )}
         <div style={{ fontSize: '17px', fontWeight: '500', color: '#111', lineHeight: '1.5', marginBottom: '8px' }}>{q.body}</div>
         <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '24px' }}>
           {q.type === 'single' ? 'Selecciona una opcion y confirma.' : 'Selecciona todas las correctas y confirma.'}

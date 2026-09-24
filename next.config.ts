@@ -4,6 +4,16 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        // Imágenes de preguntas: se descargan una vez y quedan en caché 30 días
+        source: '/img/preguntas/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=2592000, stale-while-revalidate=86400',
+          },
+        ],
+      },
+      {
         source: '/q/:slug*',
         headers: [
           {

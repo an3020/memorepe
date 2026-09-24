@@ -33,7 +33,7 @@ export default async function RevisionPage({ params }) {
 
   const { data: answers } = await supabase
     .from('session_answers')
-    .select('*, questions(body, type, explanation, options(*))')
+    .select('*, questions(*, options(*))')
     .eq('session_id', session_id)
     .in('result', ['wrong', 'partial'])
     .order('created_at')
@@ -85,6 +85,10 @@ export default async function RevisionPage({ params }) {
                     <span style={{ fontSize: '11px', color: '#9ca3af' }}>Pregunta {idx + 1}</span>
                   </div>
 
+                  {q.image_url && (
+                    <img src={q.image_url} alt="Imagen de la pregunta" loading="lazy"
+                      style={{ display: 'block', maxWidth: '100%', maxHeight: '260px', objectFit: 'contain', margin: '0 0 12px', borderRadius: '8px', border: '1px solid #f0f0f0' }} />
+                  )}
                   <div style={{ fontSize: '14px', fontWeight: '500', color: '#111', lineHeight: '1.5', marginBottom: '14px' }}>
                     {q.body}
                   </div>

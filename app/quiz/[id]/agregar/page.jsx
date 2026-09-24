@@ -143,10 +143,11 @@ export default function AgregarPreguntas({ params }) {
       const allOpts = [cols[1], cols[2], cols[3], cols[4], cols[5]].filter(Boolean)
       const correctasRaw = cols[6]?.trim()
       const explanation = cols[7] || ''
+      const image_url = (cols[8] || '').trim() || null
       let correctIndexes = [0]
       if (correctasRaw) correctIndexes = correctasRaw.split(',').map(n => parseInt(n.trim()) - 1).filter(n => !isNaN(n))
       const options = allOpts.map((body, idx) => ({ body, is_correct: correctIndexes.includes(idx) }))
-      parsed.push({ body: cols[0], type: correctIndexes.length > 1 ? 'multiple' : 'single', explanation, options })
+      parsed.push({ body: cols[0], type: correctIndexes.length > 1 ? 'multiple' : 'single', explanation, options, image_url })
     }
     return parsed
   }
@@ -262,7 +263,8 @@ export default function AgregarPreguntas({ params }) {
 
   async function saveQuestions(questions) {
     const questionsToInsert = questions.map((q, idx) => ({
-      quiz_id: quizId, body: q.body, type: q.type, explanation: q.explanation || null, order: questionCount + idx
+      quiz_id: quizId, body: q.body, type: q.type, explanation: q.explanation || null, order: questionCount + idx,
+      ...(q.image_url ? { image_url: q.image_url } : {}),
     }))
     const { data: savedQuestions } = await supabase.from('questions').insert(questionsToInsert).select()
     if (savedQuestions) {
