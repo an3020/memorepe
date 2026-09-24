@@ -29,9 +29,9 @@ from pares p;
 begin;
 
 -- Títulos, categorías y universidad
-update quizzes set title = 'Examen Único de Medicina 2025 – Tema A' where id = '6b3c5efb-513e-4207-ac44-bbaefaf683fb';
-update quizzes set title = 'Examen Único de Medicina 2025 – Tema B' where id = 'a6da58ef-ea80-4de4-9a60-eee8994fefbb';
-update quizzes set title = 'Examen Único de Medicina 2025 – Tema C' where id = '4d0d19b9-e2a8-463e-ae79-3a9043ff5bdb';
+update quizzes set title = 'Examen Único de Residencias Médicas 2025 – Tema A' where id = '6b3c5efb-513e-4207-ac44-bbaefaf683fb';
+update quizzes set title = 'Examen Único de Residencias Médicas 2025 – Tema B' where id = 'a6da58ef-ea80-4de4-9a60-eee8994fefbb';
+update quizzes set title = 'Examen Único de Residencias Médicas 2025 – Tema C' where id = '4d0d19b9-e2a8-463e-ae79-3a9043ff5bdb';
 update quizzes set title = 'Derecho Penal Económico – Preguntas por módulo (IA)', category = 'derecho', faculty = coalesce(nullif(trim(faculty), ''), 'Siglo 21') where id = 'f14405d1-a02c-46cb-ab9d-503deea2e190';
 update quizzes set title = 'Derecho Penal Económico – 2do Parcial (IA)', category = 'derecho', faculty = coalesce(nullif(trim(faculty), ''), 'Siglo 21') where id = '16a2fcf9-fabe-4213-8219-53ac9fb1fdaa';
 update quizzes set title = 'Derecho Penal Económico – 2do Parcial – Abril 2026', category = 'derecho', faculty = coalesce(nullif(trim(faculty), ''), 'Siglo 21') where id = '006f898d-ee4e-4c61-a6a7-c093119a9118';
@@ -66,9 +66,25 @@ update quizzes set faculty = 'CENEVAL' where id = '0dd6870d-f8a4-4f27-a2ba-df806
 -- Ocultar (no borrar): pasan a 'Solo con link'. Quien tenga el link sigue
 -- entrando y conserva su progreso; salen de Explorar, del sitemap y de Google.
 update quizzes set visibility = 'link' where id = '7872f53e-e913-4493-a750-6cc111cc0852';  -- Examen Único MEDICINA TEMA: B 2025 (2ª copia)
-update quizzes set visibility = 'link' where id = '07ad5fcf-3d80-4638-b9a1-1d679ccb393b';  -- Contratos de Empresa PRIMER PARCIAL US21
 update quizzes set visibility = 'link' where id = 'd6a403e7-0730-4c23-99eb-d7e188dc8a92';  -- Historia del Derecho COMPLETO (0 preguntas)
 
+commit;
+
+
+-- ---------- PASO 3: borrar "Contratos de Empresa PRIMER PARCIAL US21" ----------
+-- Irreversible. Borra el banco, sus preguntas y todo lo que depende de él
+-- (progreso, sesiones, favoritos, reportes). Si algo falla, no se borra nada.
+begin;
+delete from user_question_progress where question_id in (select id from questions where quiz_id = '07ad5fcf-3d80-4638-b9a1-1d679ccb393b');
+delete from session_answers        where question_id in (select id from questions where quiz_id = '07ad5fcf-3d80-4638-b9a1-1d679ccb393b');
+delete from options                where question_id in (select id from questions where quiz_id = '07ad5fcf-3d80-4638-b9a1-1d679ccb393b');
+delete from question_reports       where quiz_id = '07ad5fcf-3d80-4638-b9a1-1d679ccb393b';
+delete from questions              where quiz_id = '07ad5fcf-3d80-4638-b9a1-1d679ccb393b';
+delete from session_answers        where session_id in (select id from study_sessions where quiz_id = '07ad5fcf-3d80-4638-b9a1-1d679ccb393b');
+delete from study_sessions         where quiz_id = '07ad5fcf-3d80-4638-b9a1-1d679ccb393b';
+delete from favorites              where quiz_id = '07ad5fcf-3d80-4638-b9a1-1d679ccb393b';
+delete from exam_quizzes           where quiz_id = '07ad5fcf-3d80-4638-b9a1-1d679ccb393b';
+delete from quizzes                where id      = '07ad5fcf-3d80-4638-b9a1-1d679ccb393b';
 commit;
 
 -- Para deshacer un ocultamiento:
