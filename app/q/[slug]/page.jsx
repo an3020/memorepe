@@ -31,12 +31,20 @@ export async function generateMetadata({ params }) {
   if (!quiz) return { title: 'Quiz no encontrado — Memorepe' }
   const desc = quiz.description ||
     `${quiz.question_count} preguntas de ${quiz.subject || 'estudio'}${quiz.faculty ? ' · ' + quiz.faculty : ''}. Estudiá gratis con repetición espaciada en Memorepe.`
+  // Título para Google: el título del banco + palabras clave al final.
+  // En la interfaz el banco sigue mostrando solo su título.
+  const extras = []
+  const esMexico = /UNAM|CENEVAL|EXANI|IPN|UAM/i.test((quiz.faculty || '') + ' ' + quiz.title)
+  if (!esMexico && !/pregunter/i.test(quiz.title)) extras.push('Preguntero')
+  if (quiz.faculty && !quiz.title.toLowerCase().includes(quiz.faculty.toLowerCase())) extras.push(quiz.faculty)
+  const seoTitle = quiz.title + (extras.length ? ' | ' + extras.join(' ') : '') + ' — Memorepe'
+
   return {
-    title: quiz.title + ' — Memorepe',
+    title: seoTitle,
     description: desc,
     alternates: { canonical: 'https://memorepe.com/q/' + slug },
     openGraph: {
-      title: quiz.title + ' — Memorepe',
+      title: seoTitle,
       description: desc,
       type: 'website',
       url: 'https://memorepe.com/q/' + slug,
