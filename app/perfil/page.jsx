@@ -2,6 +2,9 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import PerfilForm from '@/app/components/PerfilForm'
+import GraficoEstudio from '@/app/components/GraficoEstudio'
+import { getNivel } from '@/lib/niveles'
+import { fechaAR, sumarDias } from '@/lib/fechas'
 
 export default async function Perfil() {
   const cookieStore = await cookies()
@@ -27,7 +30,7 @@ export default async function Perfil() {
 
   const { data: userProfile } = await supabase
     .from('users')
-    .select('username, bio, location, career, website, show_email, plan, streak_current, streak_best, last_study_date')
+    .select('username, bio, location, career, website, show_email, plan, streak_current, streak_best, last_study_date, xp_total')
     .eq('id', user.id)
     .single()
 
@@ -40,30 +43,64 @@ export default async function Perfil() {
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
-  const { data: sessions } = await supabase
-    .from('study_sessions')
-    .select('*')
-    .eq('user_id', user.id)
-    .not('finished_at', 'is', null)
-    .order('finished_at', { ascending: false })
+  // Totales calculados en la base, sin tope de filas
+  const { data: statsData } = await supabase
+    .rpc('get_user_stats', { p_user_id: user.id })
+  const stats = Array.isArray(statsData) ? statsData[0] : statsData
+  const totalSesiones = Number(stats?.sesiones || 0)
+  const totalCorrectas = Number(stats?.correctas || 0)
+  const totalRespondidas = Number(stats?.respondidas || 0)
+  const precision = totalRespondidas > 0 ? Math.round((totalCorrectas / totalRespondidas) * 100) : null
 
-  const totalCorrect = sessions?.reduce((sum, s) => sum + (s.correct || 0), 0) || 0
-  const totalQuestions = sessions?.reduce((sum, s) => sum + (s.total_questions || 0), 0) || 0
-  const precision = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : null
-  const xpTotal = sessions?.reduce((sum, s) => sum + (s.xp_earned || 0), 0) || 0
-  const nivel = Math.floor(xpTotal / 200) + 1
-  const xpEnNivel = xpTotal % 200
-  const xpPct = (xpEnNivel / 200) * 100
+  const xpTotal = userProfile?.xp_total || 0
+  const nivelInfo = getNivel(xpTotal)
+  const nivel = nivelInfo.nivel
 
-  const ultimas12semanas = Array.from({ length: 84 }, (_, i) => {
-    const d = new Date()
-    d.setDate(d.getDate() - (83 - i))
-    return d.toISOString().split('T')[0]
+  // Sesiones de las últimas 12 semanas, por páginas (Supabase corta en 1000 filas)
+  const today = fechaAR(new Date())
+  const desde = new Date(sumarDias(today, -84) + 'T00:00:00-03:00').toISOString()
+  const sessions = []
+  for (let desdeFila = 0; ; desdeFila += 1000) {
+    const { data: pagina } = await supabase
+      .from('study_sessions')
+      .select('finished_at, correct, wrong, partial, duration_seconds')
+      .eq('user_id', user.id)
+      .not('finished_at', 'is', null)
+      .gte('finished_at', desde)
+      .order('finished_at', { ascending: true })
+      .range(desdeFila, desdeFila + 999)
+    if (!pagina || pagina.length === 0) break
+    sessions.push(...pagina)
+    if (pagina.length < 1000) break
+  }
+
+  // Agregado por día (hora Argentina)
+  const porDia = {}
+  for (const s of sessions) {
+    const dia = fechaAR(s.finished_at)
+    if (!porDia[dia]) porDia[dia] = { preguntas: 0, segundos: 0, conDuracion: false }
+    porDia[dia].preguntas += (s.correct || 0) + (s.wrong || 0) + (s.partial || 0)
+    if (s.duration_seconds !== null && s.duration_seconds !== undefined) {
+      porDia[dia].segundos += s.duration_seconds
+      porDia[dia].conDuracion = true
+    }
+  }
+
+  // Datos del gráfico: últimos 30 días, el último es hoy
+  const diasGrafico = Array.from({ length: 30 }, (_, i) => {
+    const fecha = sumarDias(today, i - 29)
+    const d = porDia[fecha]
+    return {
+      fecha,
+      preguntas: d?.preguntas || 0,
+      minutos: !d ? 0 : d.conDuracion ? Math.round(d.segundos / 60) : null,
+    }
   })
 
+  const ultimas12semanas = Array.from({ length: 84 }, (_, i) => sumarDias(today, i - 83))
+
   const activityLevels = ultimas12semanas.map(dia => {
-    const sesionesDelDia = sessions?.filter(s => s.finished_at?.split('T')[0] === dia) || []
-    const total = sesionesDelDia.reduce((sum, s) => sum + (s.total_questions || 0), 0)
+    const total = porDia[dia]?.preguntas || 0
     if (total === 0) return 0
     if (total < 10) return 1
     if (total < 30) return 2
@@ -74,11 +111,11 @@ export default async function Perfil() {
   const activityColors = ['#f9fafb', '#d1fae5', '#6ee7b7', '#34d399', '#059669']
 
   const logros = [
-    { key: 'primera_sesion', icon: '⚡', nombre: 'Primera sesión', desc: 'Completaste tu primera sesión de estudio', desbloqueado: sessions && sessions.length > 0 },
+    { key: 'primera_sesion', icon: '⚡', nombre: 'Primera sesión', desc: 'Completaste tu primera sesión de estudio', desbloqueado: totalSesiones > 0 },
     { key: 'quiz_creado', icon: '📚', nombre: 'Creador', desc: 'Publicaste tu primer banco de preguntas', desbloqueado: quizzes && quizzes.length > 0 },
-    { key: '100_preguntas', icon: '🎯', nombre: '100 preguntas', desc: 'Respondiste 100 preguntas', desbloqueado: totalQuestions >= 100 },
+    { key: '100_preguntas', icon: '🎯', nombre: '100 preguntas', desc: 'Respondiste 100 preguntas', desbloqueado: totalRespondidas >= 100 },
     { key: 'precision_80', icon: '🏆', nombre: 'Precisión 80%', desc: 'Alcanzaste 80% de precisión', desbloqueado: precision !== null && precision >= 80 },
-    { key: '500_preguntas', icon: '🔥', nombre: '500 preguntas', desc: 'Respondiste 500 preguntas', desbloqueado: totalQuestions >= 500 },
+    { key: '500_preguntas', icon: '🔥', nombre: '500 preguntas', desc: 'Respondiste 500 preguntas', desbloqueado: totalRespondidas >= 500 },
     { key: 'nivel_5', icon: '👑', nombre: 'Nivel 5', desc: 'Alcanzaste el nivel 5', desbloqueado: nivel >= 5 },
   ]
 
@@ -108,7 +145,7 @@ export default async function Perfil() {
               <div style={{ fontSize: '22px', fontWeight: '500', color: '#111', marginBottom: '2px' }}>@{username}</div>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '11px', fontWeight: '500', padding: '2px 8px', borderRadius: '6px', background: '#d1fae5', color: '#065f46' }}>
-                  Nivel {nivel}
+                  Nivel {nivel} · {nivelInfo.nombre}
                 </span>
                 <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '6px', background: '#e5e7eb', color: '#374151' }}>
                   {userProfile?.plan || 'Free'}
@@ -146,11 +183,11 @@ export default async function Perfil() {
           <div style={{ fontSize: '14px', fontWeight: '500', color: '#111', marginBottom: '12px' }}>Estadísticas</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '16px' }}>
             <div style={{ background: 'white', borderRadius: '10px', padding: '12px', textAlign: 'center', border: '1px solid #e5e7eb' }}>
-              <div style={{ fontSize: '20px', fontWeight: '500', color: '#111' }}>{sessions?.length || 0}</div>
+              <div style={{ fontSize: '20px', fontWeight: '500', color: '#111' }}>{totalSesiones.toLocaleString('es-AR')}</div>
               <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>Sesiones</div>
             </div>
             <div style={{ background: 'white', borderRadius: '10px', padding: '12px', textAlign: 'center', border: '1px solid #e5e7eb' }}>
-              <div style={{ fontSize: '20px', fontWeight: '500', color: '#111' }}>{xpTotal}</div>
+              <div style={{ fontSize: '20px', fontWeight: '500', color: '#111' }}>{xpTotal.toLocaleString('es-AR')}</div>
               <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>XP total</div>
             </div>
             <div style={{ background: 'white', borderRadius: '10px', padding: '12px', textAlign: 'center', border: '1px solid #e5e7eb' }}>
@@ -166,13 +203,18 @@ export default async function Perfil() {
           {/* Barra de nivel */}
           <div style={{ background: 'white', borderRadius: '10px', padding: '12px', border: '1px solid #e5e7eb' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-              <span style={{ fontSize: '13px', fontWeight: '500', color: '#111' }}>Nivel {nivel}</span>
-              <span style={{ fontSize: '11px', color: '#9ca3af' }}>{200 - xpEnNivel} XP para Nivel {nivel + 1}</span>
+              <span style={{ fontSize: '13px', fontWeight: '500', color: '#111' }}>Nivel {nivel} · {nivelInfo.nombre}</span>
+              <span style={{ fontSize: '11px', color: '#9ca3af' }}>{Math.max(0, nivelInfo.xpFin - xpTotal).toLocaleString('es-AR')} XP para el siguiente nivel</span>
             </div>
             <div style={{ height: '5px', background: '#e5e7eb', borderRadius: '3px', overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: xpPct + '%', background: '#059669', borderRadius: '3px' }} />
+              <div style={{ height: '100%', width: nivelInfo.pct + '%', background: '#059669', borderRadius: '3px' }} />
             </div>
           </div>
+        </div>
+
+        {/* BLOQUE 3b — Gráfico de estudio */}
+        <div style={{ background: '#f9fafb', borderRadius: '16px', padding: '20px', marginBottom: '12px' }}>
+          <GraficoEstudio dias={diasGrafico} />
         </div>
 
         {/* BLOQUE 4 — Actividad */}
