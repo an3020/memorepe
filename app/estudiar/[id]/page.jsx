@@ -411,11 +411,18 @@ function EstudiarInner({ params }) {
       )}
 
       <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 24px', borderBottom: '1px solid #f0f0f0', position: 'sticky', top: 0, background: 'white', zIndex: 10 }}>
-        <a href="/dashboard" style={{ fontSize: '16px', fontWeight: '500', textDecoration: 'none', color: '#111' }}>
-          memo<span style={{ color: '#059669' }}>repe</span>
-          <span style={{ fontSize: '12px', color: '#9ca3af', marginLeft: '10px', fontWeight: '400' }}>{modoNombre}</span>
-        </a>
-        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', fontSize: '13px' }}>
+        <div style={{ minWidth: 0, flex: 1, marginRight: '12px' }}>
+          <a href="/dashboard" style={{ fontSize: '16px', fontWeight: '500', textDecoration: 'none', color: '#111' }}>
+            memo<span style={{ color: '#059669' }}>repe</span>
+            <span style={{ fontSize: '12px', color: '#9ca3af', marginLeft: '10px', fontWeight: '400' }}>{modoNombre}</span>
+          </a>
+          {quiz?.title && (
+            <div title={quiz.title} style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>
+              {quiz.title.length > 40 ? quiz.title.slice(0, 40).trimEnd() + '…' : quiz.title}
+            </div>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', fontSize: '13px', flexShrink: 0, whiteSpace: 'nowrap' }}>
           <span style={{ color: '#059669', fontWeight: '500' }}>✓ {session.correct}</span>
           <span style={{ color: '#ef4444', fontWeight: '500' }}>✗ {session.wrong}</span>
           <span style={{ color: '#d97706', fontWeight: '500' }}>~ {session.partial}</span>
