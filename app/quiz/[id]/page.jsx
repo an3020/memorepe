@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { permanentRedirect } from 'next/navigation'
+import { mostrarEstudiando } from '@/lib/estudiando'
 
 function getLabels(type) {
   const map = {
@@ -119,7 +120,8 @@ export default async function QuizPublico({ params }) {
     quiz.year_course && { label: labels.year_course, value: quiz.year_course },
     username         && { label: 'Autor',            value: '@' + username, href: '/usuario/' + username },
     { label: 'Preguntas',  value: quiz.question_count },
-    { label: 'Estudiando', value: quiz.student_count || 0 },
+    mostrarEstudiando(quiz.student_count) && { label: 'Estudiando', value: quiz.student_count },
+    quiz.official_source && { label: 'Respuestas', value: '✓ Oficiales · ' + quiz.official_source },
   ].filter(Boolean)
 
   const quizSchema = {

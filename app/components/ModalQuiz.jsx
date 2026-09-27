@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { mostrarEstudiando } from '@/lib/estudiando'
 
 function getLabels(type) {
   const map = {
@@ -48,7 +49,8 @@ export default function ModalQuiz({ quiz, progressMap = {} }) {
     quiz.year_course && { label: labels.year_course, value: quiz.year_course },
     username         && { label: 'Autor',            value: '@' + username, href: '/usuario/' + username },
     { label: 'Preguntas',  value: quiz.question_count },
-    { label: 'Estudiando', value: quiz.student_count || 0 },
+    mostrarEstudiando(quiz.student_count) && { label: 'Estudiando', value: quiz.student_count },
+    quiz.official_source && { label: 'Respuestas', value: '✓ Oficiales · ' + quiz.official_source },
   ].filter(Boolean)
 
   return (

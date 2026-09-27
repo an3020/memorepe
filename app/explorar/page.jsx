@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import FeedbackButton from '@/app/components/FeedbackButton'
 import BuscadorExplorar from '@/app/components/BuscadorExplorar'
 import ModalQuiz from '@/app/components/ModalQuiz'
+import { mostrarEstudiando } from '@/lib/estudiando'
 
 export default async function Explorar({ searchParams }) {
   const cookieStore = await cookies()
@@ -230,7 +231,8 @@ export default async function Explorar({ searchParams }) {
 
                   <div style={{ display: 'flex', gap: '12px', marginBottom: tieneProgreso ? '10px' : '0' }}>
                     <span style={{ fontSize: '12px', color: '#9ca3af' }}>{quiz.question_count} preguntas</span>
-                    <span style={{ fontSize: '12px', color: '#9ca3af' }}>{quiz.student_count || 0} estudiando</span>
+                    {mostrarEstudiando(quiz.student_count) && <span style={{ fontSize: '12px', color: '#9ca3af' }}>{quiz.student_count} estudiando</span>}
+                    {quiz.official_source && <span title={'Respuestas oficiales · ' + quiz.official_source} style={{ fontSize: '12px', color: '#059669' }}>✓ Respuestas oficiales</span>}
                   </div>
 
                   {tieneProgreso && (
