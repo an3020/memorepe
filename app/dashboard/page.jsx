@@ -340,7 +340,7 @@ export default async function Dashboard({ searchParams }) {
           <div style={seccion}>
             <div style={seccionTitulo}>Estudiados recientemente</div>
             {recentQuizzes.map(quiz => (
-              <QuizProgressCard key={quiz.id} quiz={quiz} p={progressMap[quiz.id]} />
+              <QuizProgressCard key={quiz.id} quiz={quiz} p={progressMap[quiz.id]} userId={user.id} />
             ))}
           </div>
         )}
@@ -353,7 +353,7 @@ export default async function Dashboard({ searchParams }) {
           </div>
           {quizzesConProgreso && quizzesConProgreso.length > 0 ? (
             quizzesConProgreso.map(quiz => (
-              <QuizProgressCard key={quiz.id} quiz={quiz} p={quiz.progreso} />
+              <QuizProgressCard key={quiz.id} quiz={quiz} p={quiz.progreso} userId={user.id} />
             ))
           ) : (
             <div style={{ border: '1px dashed #e5e7eb', borderRadius: '12px', padding: '32px', textAlign: 'center', background: 'white' }}>

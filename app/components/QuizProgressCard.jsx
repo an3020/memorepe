@@ -20,7 +20,8 @@ function Tooltip({ text, children }) {
   )
 }
 
-export default function QuizProgressCard({ quiz, p }) {
+export default function QuizProgressCard({ quiz, p, userId }) {
+  const puedeGestionar = !!userId && quiz.user_id === userId
   const tieneProgreso = p && p.seen > 0
   return (
     <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '14px 16px', marginBottom: '10px' }}>
@@ -32,9 +33,11 @@ export default function QuizProgressCard({ quiz, p }) {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-          <a href={'/quiz/' + quiz.id + '/gestionar'} style={{ fontSize: '11px', color: '#6b7280', textDecoration: 'none', border: '1px solid #e5e7eb', padding: '5px 10px', borderRadius: '6px' }}>
-            Gestionar
-          </a>
+          {puedeGestionar && (
+            <a href={'/quiz/' + quiz.id + '/gestionar'} style={{ fontSize: '11px', color: '#6b7280', textDecoration: 'none', border: '1px solid #e5e7eb', padding: '5px 10px', borderRadius: '6px' }}>
+              Gestionar
+            </a>
+          )}
           <a href={'/estudiar/' + quiz.id + '/inicio'} style={{ fontSize: '12px', fontWeight: '500', color: '#065f46', background: '#d1fae5', border: '1px solid #6ee7b7', padding: '5px 12px', borderRadius: '6px', textDecoration: 'none' }}>
             {tieneProgreso ? 'Continuar' : 'Estudiar'}
           </a>
