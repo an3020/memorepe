@@ -31,7 +31,7 @@ function buildQueue(questionsData, progressData, limite) {
     const isDue = !p || p.next_review_date <= today
     const updatedToday = p?.updated_at?.substring(0, 10) === today
     const acertadaHoy = updatedToday && p?.last_quality >= 3
-    const priority = !p ? 0 : acertadaHoy ? 3 : isDue ? 1 : 2
+    const priority = acertadaHoy ? 3 : (p && isDue) ? 0 : !p ? 1 : 2
     return {
       ...q,
       options: [...q.options].sort(() => Math.random() - 0.5),
