@@ -47,7 +47,7 @@ export default function AdminReportesClient({ pendientes, resueltos }) {
               <span> · autor: @{r.quizzes?.users?.username}</span>
               <span> · {timeAgo(r.created_at)}</span>
               {r.users?.username && (
-                <span> · reportado por <span style={{ color: '#d97706' }}>@{r.users.username}</span></span>
+                <span> · reportado por <a href={'/admin/stats/' + r.user_id} style={{ color: '#d97706', textDecoration: 'none' }}>@{r.users.username}</a></span>
               )}
             </div>
           </div>

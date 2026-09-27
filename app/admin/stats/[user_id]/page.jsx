@@ -1,157 +1,193 @@
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { requireAdmin, AdminNav, C, num, timeAgo, estilos as E } from '@/lib/admin'
 
-const ADMIN_ID = '0bccda9a-a636-45b9-aea9-8580ecffb3b9'
+export const revalidate = 0
 
-export default async function AdminStatsUser({ params }) {
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+function semanaCorta(ymd) {
+  const [, m, d] = String(ymd).slice(0, 10).split('-')
+  return parseInt(d) + ' ' + MESES[parseInt(m) - 1]
+}
+function pct(a, b) {
+  return Number(b) > 0 ? Math.round((Number(a) / Number(b)) * 100) : null
+}
+
+export default async function AdminUsuarioFicha({ params }) {
   const { user_id } = await params
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    {
-      cookies: {
-        getAll() { return cookieStore.getAll() },
-        setAll(cookiesToSet) {
-          try { cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options)) } catch (e) {}
-        }
-      }
-    }
-  )
+  const admin = await requireAdmin()
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user || user.id !== ADMIN_ID) redirect('/dashboard')
-
-  const { data: perfil } = await supabase
+  const { data: perfil } = await admin
     .from('users')
-    .select('username, email, full_name, streak_current, streak_best, last_study_date, created_at')
+    .select('*')
     .eq('id', user_id)
     .single()
 
   if (!perfil) redirect('/admin/stats')
 
-  const { data: sessions } = await supabase
-    .from('study_sessions')
-    .select('*, quizzes(title)')
-    .eq('user_id', user_id)
-    .not('finished_at', 'is', null)
-    .order('finished_at', { ascending: false })
-    .limit(50)
+  const [bancosRes, reportesRes, semanasRes, feedbackRes, creadosRes, statsRes] = await Promise.all([
+    admin.rpc('admin_user_bancos', { p_user: user_id }),
+    admin.rpc('admin_user_reportes', { p_user: user_id }),
+    admin.rpc('admin_user_semanas', { p_user: user_id }),
+    admin.from('feedback').select('id, message, url, created_at').eq('user_id', user_id).order('created_at', { ascending: false }).limit(50),
+    admin.from('quizzes').select('id, title, slug, visibility, question_count, student_count, created_at').eq('user_id', user_id).order('created_at', { ascending: false }),
+    admin.rpc('get_user_stats', { p_user_id: user_id }),
+  ])
 
-  const totalSessions = sessions?.length || 0
-  const totalCorrect = sessions?.reduce((sum, s) => sum + (s.correct || 0), 0) || 0
-  const totalQuestions = sessions?.reduce((sum, s) => sum + (s.total_questions || 0), 0) || 0
-  const totalXP = sessions?.reduce((sum, s) => sum + (s.xp_earned || 0), 0) || 0
-  const precision = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : null
+  const bancos = bancosRes.data || []
+  const reportes = reportesRes.data || []
+  const semanas = semanasRes.data || []
+  const feedbacks = feedbackRes.data || []
+  const creados = creadosRes.data || []
+  const stats = Array.isArray(statsRes.data) ? statsRes.data[0] : statsRes.data
+  const faltaSQL = [bancosRes, reportesRes, semanasRes].some(r => r.error)
 
-  const { data: progress } = await supabase
-    .from('user_question_progress')
-    .select('question_id, repetitions, last_quality, next_review_date')
-    .eq('user_id', user_id)
+  const precision = pct(stats?.correctas, stats?.respondidas)
+  const minutos = bancos.reduce((s, b) => s + Number(b.minutos || 0), 0)
+  const maxSem = Math.max(1, ...semanas.map(s => Number(s.preguntas)))
+  const resueltos = reportes.filter(r => r.status === 'resolved').length
 
-  const dominated = progress?.filter(p => p.repetitions >= 2 && p.last_quality >= 3).length || 0
-  const expert = progress?.filter(p => p.repetitions >= 4 && p.last_quality >= 3).length || 0
-
-  function timeAgo(dateStr) {
-    const date = new Date(dateStr)
-    const now = new Date()
-    const diff = Math.floor((now - date) / 1000)
-    if (diff < 3600) return 'hace ' + Math.floor(diff / 60) + ' min'
-    if (diff < 86400) return 'hace ' + Math.floor(diff / 3600) + ' h'
-    return 'hace ' + Math.floor(diff / 86400) + ' días'
-  }
+  const dato = (label, valor, color) => (
+    <div style={{ background: '#111', border: '1px solid ' + C.borde, borderRadius: '10px', padding: '12px' }}>
+      <div style={{ fontSize: '11px', color: C.texto3, marginBottom: '4px' }}>{label}</div>
+      <div style={{ fontSize: '20px', fontWeight: '500', color: color || C.texto }}>{valor}</div>
+    </div>
+  )
 
   return (
-    <div style={{ minHeight: '100vh', background: 'white', fontFamily: 'Arial, sans-serif' }}>
-      <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 24px', borderBottom: '1px solid #f0f0f0' }}>
-        <a href="/dashboard" style={{ fontSize: '18px', fontWeight: '500', textDecoration: 'none', color: '#111' }}>
-          memo<span style={{ color: '#059669' }}>repe</span>
-          <span style={{ fontSize: '12px', color: '#9ca3af', marginLeft: '10px' }}>Admin</span>
-        </a>
-        <a href="/admin/stats" style={{ fontSize: '13px', color: '#9ca3af', textDecoration: 'none' }}>← Volver a stats</a>
-      </nav>
+    <div style={E.pagina}>
+      <AdminNav activo="/admin/stats" />
+      <div style={{ ...E.cont, maxWidth: '1000px' }}>
+        <a href="/admin/stats" style={{ fontSize: '12px', color: C.texto3, textDecoration: 'none' }}>← Rankings</a>
 
-      <div style={{ maxWidth: '720px', margin: '0 auto', padding: '32px 24px' }}>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '28px' }}>
-          <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#d1fae5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: '500', color: '#065f46', flexShrink: 0 }}>
-            {perfil.username?.slice(0, 2).toUpperCase()}
-          </div>
-          <div>
-            <h1 style={{ fontSize: '20px', fontWeight: '500', color: '#111', marginBottom: '2px' }}>@{perfil.username}</h1>
-            <p style={{ fontSize: '13px', color: '#9ca3af' }}>
-              Miembro desde {perfil.created_at?.slice(0, 10)}
-            </p>
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '28px' }}>
-          <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: '500', color: '#059669' }}>{totalSessions}</div>
-            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>Sesiones</div>
-          </div>
-          <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: '500', color: '#111' }}>{precision !== null ? precision + '%' : '-'}</div>
-            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>Precisión</div>
-          </div>
-          <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: '500', color: '#d97706' }}>{perfil.streak_current || 0}</div>
-            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>Racha actual</div>
-          </div>
-          <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: '500', color: '#0369a1' }}>{totalXP}</div>
-            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>XP total</div>
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '28px' }}>
-          <div style={{ background: '#f0fdf4', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: '500', color: '#059669' }}>{dominated}</div>
-            <div style={{ fontSize: '11px', color: '#059669', marginTop: '2px' }}>Preguntas dominadas</div>
-          </div>
-          <div style={{ background: '#e0f2fe', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: '500', color: '#0369a1' }}>{expert}</div>
-            <div style={{ fontSize: '11px', color: '#0369a1', marginTop: '2px' }}>Preguntas experto</div>
-          </div>
-        </div>
-
-        <div style={{ fontSize: '14px', fontWeight: '500', color: '#111', marginBottom: '12px' }}>
-          Últimas 50 sesiones
-        </div>
-
-        {sessions?.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '24px', border: '1px dashed #e5e7eb', borderRadius: '10px', color: '#9ca3af', fontSize: '13px' }}>
-            Sin sesiones registradas.
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {sessions?.map(s => {
-              const pct = s.total_questions > 0 ? Math.round((s.correct / s.total_questions) * 100) : 0
-              return (
-                <div key={s.id} style={{ border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '13px', fontWeight: '500', color: '#111', marginBottom: '2px' }}>
-                      {s.quizzes?.title || 'Quiz eliminado'}
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#9ca3af' }}>
-                      {s.total_questions} preguntas · {timeAgo(s.finished_at)}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '12px', fontSize: '12px', alignItems: 'center' }}>
-                    <span style={{ color: '#059669' }}>✓ {s.correct}</span>
-                    <span style={{ color: '#ef4444' }}>✗ {s.wrong}</span>
-                    <span style={{ color: '#d97706' }}>~ {s.partial}</span>
-                    <span style={{ fontWeight: '500', color: pct >= 70 ? '#059669' : pct >= 50 ? '#d97706' : '#ef4444', background: '#f9fafb', padding: '2px 8px', borderRadius: '6px' }}>
-                      {pct}%
-                    </span>
-                  </div>
-                </div>
-              )
-            })}
+        {faltaSQL && (
+          <div style={{ background: '#2d1f05', border: '1px solid #854d0e', color: C.ambar, borderRadius: '10px', padding: '12px 16px', fontSize: '13px', margin: '12px 0' }}>
+            Falta correr <b>supabase/2026-09-27-admin-usuarios.sql</b> en Supabase.
           </div>
         )}
 
+        {/* Encabezado */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', margin: '16px 0 20px' }}>
+          <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: C.verdeOsc, color: C.verde, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: '600', flexShrink: 0 }}>
+            {(perfil.username || '?').slice(0, 2).toUpperCase()}
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <h1 style={E.h1}>
+              @{perfil.username || '—'}
+              {perfil.blocked && <span style={{ fontSize: '11px', color: C.rojo, marginLeft: '8px' }}>BLOQUEADO</span>}
+              {perfil.role === 'admin' && <span style={{ fontSize: '11px', color: C.verde, marginLeft: '8px' }}>ADMIN</span>}
+            </h1>
+            <div style={{ fontSize: '12px', color: C.texto3 }}>
+              {perfil.email} · se registró {new Date(perfil.created_at).toLocaleDateString('es-AR')} · plan {perfil.plan || 'free'}
+            </div>
+            <div style={{ fontSize: '12px', color: C.texto3, marginTop: '2px' }}>
+              Llegó por: <span style={{ color: C.texto2 }}>{perfil.origen_path || 'sin dato'}</span>
+              {(perfil.origen_utm || perfil.origen_referrer) && <> · desde <span style={{ color: C.texto2 }}>{perfil.origen_utm || perfil.origen_referrer}</span></>}
+            </div>
+          </div>
+        </div>
+
+        {/* Resumen */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px', marginBottom: '16px' }}>
+          {dato('Sesiones', num(stats?.sesiones))}
+          {dato('Preguntas', num(stats?.respondidas))}
+          {dato('Precisión', precision !== null ? precision + '%' : '—')}
+          {dato('Minutos registrados', num(minutos))}
+          {dato('Bancos usados', num(bancos.length))}
+          {dato('Racha', (perfil.streak_current || 0) + 'd', C.ambar)}
+          {dato('XP', num(perfil.xp_total))}
+          {dato('Reportes', num(reportes.length) + (reportes.length ? ' (' + resueltos + ' válidos)' : ''))}
+        </div>
+
+        {/* Actividad por semana */}
+        <div style={E.seccion}>
+          <h2 style={E.h2}>Actividad por semana</h2>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', height: '90px' }}>
+            {semanas.map(s => (
+              <div key={s.semana} title={semanaCorta(s.semana) + ': ' + num(s.preguntas) + ' preguntas · ' + num(s.sesiones) + ' sesiones · ' + num(s.minutos) + ' min'}
+                style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', height: '100%', justifyContent: 'flex-end' }}>
+                <div style={{ width: '100%', height: Math.max(2, (Number(s.preguntas) / maxSem) * 70) + 'px', background: Number(s.preguntas) ? C.verde : '#2a2a2a', borderRadius: '3px 3px 0 0' }} />
+                <div style={{ fontSize: '9px', color: C.texto3, whiteSpace: 'nowrap' }}>{semanaCorta(s.semana)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Bancos que estudió */}
+        <div style={E.seccion}>
+          <h2 style={E.h2}>Qué estudió ({bancos.length} bancos)</h2>
+          {bancos.length === 0 ? <div style={E.vacio}>Todavía no terminó ninguna sesión.</div> : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead><tr>
+                  <th style={{ ...E.th, textAlign: 'left' }}>Banco</th>
+                  <th style={E.th}>Sesiones</th><th style={E.th}>Preguntas</th><th style={E.th}>Precisión</th>
+                  <th style={E.th}>Minutos</th><th style={E.th}>Primera vez</th><th style={E.th}>Última vez</th>
+                </tr></thead>
+                <tbody>
+                  {bancos.map(b => (
+                    <tr key={b.quiz_id}>
+                      <td style={{ ...E.td, textAlign: 'left', whiteSpace: 'normal' }}>
+                        <a href={'/admin/quizzes/' + b.quiz_id} style={{ color: C.texto, textDecoration: 'none' }}>{b.title}</a>
+                      </td>
+                      <td style={E.td}>{num(b.sesiones)}</td>
+                      <td style={E.td}>{num(b.preguntas)}</td>
+                      <td style={{ ...E.td, color: C.texto2 }}>{pct(b.correctas, b.preguntas) ?? '—'}{pct(b.correctas, b.preguntas) !== null ? '%' : ''}</td>
+                      <td style={{ ...E.td, color: C.texto2 }}>{num(b.minutos)}</td>
+                      <td style={{ ...E.td, color: C.texto3 }}>{new Date(b.primera).toLocaleDateString('es-AR')}</td>
+                      <td style={{ ...E.td, color: C.texto3 }}>{timeAgo(b.ultima)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '16px' }}>
+          {/* Reportes */}
+          <div style={E.seccion}>
+            <h2 style={E.h2}>Reportes que hizo ({reportes.length})</h2>
+            {reportes.length === 0 ? <div style={E.vacio}>No hizo reportes.</div> : reportes.map(r => (
+              <div key={r.id} style={{ padding: '8px 0', borderBottom: '1px solid ' + C.borde }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
+                  <span style={{ fontSize: '12px', color: C.texto2 }}>{r.reason}</span>
+                  <span style={{ fontSize: '11px', color: r.status === 'resolved' ? C.verde : C.ambar, whiteSpace: 'nowrap' }}>
+                    {r.status === 'resolved' ? 'Resuelto' : 'Pendiente'} · {timeAgo(r.created_at)}
+                  </span>
+                </div>
+                <div style={{ fontSize: '12px', color: C.texto, marginTop: '2px', lineHeight: '1.4' }}>{r.pregunta || '(pregunta borrada)'}</div>
+                {r.comment && <div style={{ fontSize: '11px', color: C.texto3, marginTop: '2px', fontStyle: 'italic' }}>“{r.comment}”</div>}
+                {r.quiz_id && <a href={'/admin/quizzes/' + r.quiz_id} style={{ fontSize: '11px', color: C.texto3 }}>{r.quiz_title}</a>}
+              </div>
+            ))}
+          </div>
+
+          <div>
+            {/* Bancos creados */}
+            <div style={E.seccion}>
+              <h2 style={E.h2}>Bancos que creó ({creados.length})</h2>
+              {creados.length === 0 ? <div style={E.vacio}>No creó bancos.</div> : creados.map(q => (
+                <div key={q.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '6px 0', borderBottom: '1px solid ' + C.borde }}>
+                  <a href={'/admin/quizzes/' + q.id} style={{ fontSize: '12px', color: C.texto, textDecoration: 'none' }}>{q.title}</a>
+                  <span style={{ fontSize: '11px', color: C.texto3, whiteSpace: 'nowrap' }}>
+                    {num(q.question_count)} preg. · {q.visibility === 'public' ? 'público' : q.visibility === 'link' ? 'con link' : 'privado'}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Feedback */}
+            <div style={E.seccion}>
+              <h2 style={E.h2}>Feedback que envió ({feedbacks.length})</h2>
+              {feedbacks.length === 0 ? <div style={E.vacio}>No envió feedback.</div> : feedbacks.map(f => (
+                <div key={f.id} style={{ padding: '6px 0', borderBottom: '1px solid ' + C.borde }}>
+                  <div style={{ fontSize: '12px', color: C.texto, lineHeight: '1.4' }}>{f.message}</div>
+                  <div style={{ fontSize: '11px', color: C.texto3 }}>{timeAgo(f.created_at)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )

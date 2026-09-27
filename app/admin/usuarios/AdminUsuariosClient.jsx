@@ -117,6 +117,12 @@ export default function AdminUsuariosClient({ usuarios }) {
             <span style={{ fontSize: '12px', color: '#6b7280' }}>{timeAgo(u.created_at)}</span>
             <div style={{ display: 'flex', gap: '6px' }}>
               <a
+                href={'/admin/stats/' + u.id}
+                style={{ fontSize: '11px', color: '#10b981', background: '#111', border: '1px solid #222', borderRadius: '6px', padding: '4px 8px', textDecoration: 'none' }}
+              >
+                Ficha
+              </a>
+              <a
                 href={'/usuario/' + u.username}
                 target="_blank"
                 style={{ fontSize: '11px', color: '#6b7280', background: '#111', border: '1px solid #222', borderRadius: '6px', padding: '4px 8px', textDecoration: 'none' }}

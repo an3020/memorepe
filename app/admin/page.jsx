@@ -33,7 +33,7 @@ function timeAgo(dateStr) {
   if (diff < 60) return 'hace un momento'
   if (diff < 3600) return 'hace ' + Math.floor(diff / 60) + ' min'
   if (diff < 86400) return 'hace ' + Math.floor(diff / 3600) + ' h'
-  if (diff < 604800) return 'hace ' + Math.floor(diff / 86400) + ' días'
+  if (diff < 604800) { const d = Math.floor(diff / 86400); return 'hace ' + d + (d === 1 ? ' día' : ' días') }
   return new Date(dateStr).toLocaleDateString('es-AR')
 }
 function num(v) {
