@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { createClient } from '@/lib/supabase'
+import { inChunks } from '@/lib/chunks'
 import { useRouter, useSearchParams } from 'next/navigation'
 import LoadingScreen from '@/app/components/LoadingScreen'
 
@@ -97,10 +98,8 @@ function EstudiarInner({ params }) {
         .from('questions').select('*, options(*)').eq('quiz_id', id).order('order')
 
       const questionIds = qData?.map(q => q.id) || []
-      const { data: progressData } = await supabase
-        .from('user_question_progress').select('*')
-        .eq('user_id', user.id)
-        .in('question_id', questionIds)
+      const { data: progressData } = await inChunks(questionIds, ids =>
+        supabase.from('user_question_progress').select('*').eq('user_id', user.id).in('question_id', ids))
 
       setQuestionsData(qData || [])
       const queue = buildQueue(qData || [], progressData || [], limite)
@@ -226,10 +225,8 @@ function EstudiarInner({ params }) {
     const limite = modoN && modoN !== 'all' ? parseInt(modoN) : null
 
     const questionIds = questionsData.map(q => q.id)
-    const { data: progressData } = await supabase
-      .from('user_question_progress').select('*')
-      .eq('user_id', userId)
-      .in('question_id', questionIds)
+    const { data: progressData } = await inChunks(questionIds, ids =>
+      supabase.from('user_question_progress').select('*').eq('user_id', userId).in('question_id', ids))
 
     const allDoneIds = new Set([...sessionDoneIds, ...questions.map(q => q.id)])
     const remainingData = questionsData.filter(q => !allDoneIds.has(q.id))

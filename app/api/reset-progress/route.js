@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { inChunks } from '@/lib/chunks'
 
 export async function POST(request) {
   const { quizId } = await request.json()
@@ -34,11 +35,8 @@ export async function POST(request) {
   const questionIds = questions?.map(q => q.id) || []
   if (!questionIds.length) return NextResponse.json({ ok: true })
 
-  const { error } = await supabase
-    .from('user_question_progress')
-    .delete()
-    .eq('user_id', user.id)
-    .in('question_id', questionIds)
+  const { error } = await inChunks(questionIds, ids =>
+    supabase.from('user_question_progress').delete().eq('user_id', user.id).in('question_id', ids))
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 

@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { inChunks } from '@/lib/chunks'
 import FavoriteButton from './FavoriteButton'
 import ShareButton from './ShareButton'
 import ResetProgressButton from '@/app/components/ResetProgressButton'
@@ -55,11 +56,8 @@ export default async function EstudiarInicio({ params }) {
 
   const questionIds = questions?.map(q => q.id) || []
 
-  const { data: progressData } = await supabase
-    .from('user_question_progress')
-    .select('question_id')
-    .eq('user_id', user.id)
-    .in('question_id', questionIds)
+  const { data: progressData } = await inChunks(questionIds, ids =>
+    supabase.from('user_question_progress').select('question_id').eq('user_id', user.id).in('question_id', ids))
 
   const seenIds = new Set(progressData?.map(p => p.question_id) || [])
   const unseenCount = questionIds.filter(qid => !seenIds.has(qid)).length
