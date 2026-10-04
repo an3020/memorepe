@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { Fragment } from 'react'
 import FeedbackButton from '@/app/components/FeedbackButton'
 import BuscadorExplorar from '@/app/components/BuscadorExplorar'
 import ModalQuiz from '@/app/components/ModalQuiz'
@@ -63,15 +64,47 @@ export default async function Explorar({ searchParams }) {
       .order('student_count', { ascending: false })
 
     if (categoria) query = query.eq('category', categoria)
-    if (busqueda) query = query.or('title.ilike.%' + busqueda + '%,subject.ilike.%' + busqueda + '%')
 
-    const { data } = await query
-    quizzes = data || []
+    // Búsqueda por palabras: primero los bancos que tienen TODAS las palabras,
+    // después los que tienen algunas (ver supabase/2026-10-04-busqueda-por-palabras.sql)
+    let rpcOk = false
+    if (busqueda) {
+      const { data: hits, error: errBusqueda } = await supabase
+        .rpc('search_quizzes', { p_q: busqueda, p_categoria: categoria || null })
+      if (!errBusqueda && hits) {
+        rpcOk = true
+        if (hits.length > 0) {
+          const { data } = await supabase
+            .from('quizzes')
+            .select('*, users(username)')
+            .in('id', hits.map(h => h.id))
+          const porId = Object.fromEntries((data || []).map(q => [q.id, q]))
+          quizzes = hits
+            .filter(h => porId[h.id])
+            .map(h => ({ ...porId[h.id], _parcial: h.coincidencias < h.total }))
+        }
+      } else {
+        // Si la función todavía no existe en Supabase, búsqueda clásica
+        query = query.or('title.ilike.%' + busqueda + '%,subject.ilike.%' + busqueda + '%')
+      }
+    }
+
+    if (!rpcOk) {
+      const { data } = await query
+      quizzes = data || []
+    }
   }
+
+  const completos = quizzes.filter(q => !q._parcial)
+  const parciales = quizzes.filter(q => q._parcial)
+  const primerParcialId = parciales[0]?.id
 
   // Registrar la búsqueda (admin: qué busca la gente y qué no encuentra)
   if (busqueda && !esBusquedaAutor) {
-    await supabase.rpc('log_search', { p_q: busqueda, p_resultados: quizzes.length, p_categoria: categoria || null })
+    const { error: errLog } = await supabase.rpc('log_search', {
+      p_q: busqueda, p_resultados: completos.length, p_categoria: categoria || null, p_parciales: parciales.length,
+    })
+    if (errLog) await supabase.rpc('log_search', { p_q: busqueda, p_resultados: completos.length, p_categoria: categoria || null })
   }
 
   let progressMap = {}
@@ -198,8 +231,18 @@ export default async function Explorar({ searchParams }) {
 
               const esMio = user && quiz.user_id === user.id
 
+              const cabeceraParcial = quiz.id === primerParcialId && (
+                <div style={{ gridColumn: '1 / -1', fontSize: '13px', color: '#6b7280', margin: completos.length ? '16px 0 0' : '0' }}>
+                  {completos.length
+                    ? 'También puede servirte'
+                    : 'No encontramos bancos con todas las palabras. Estos coinciden en parte.'}
+                </div>
+              )
+
               return (
-                <div key={quiz.id} style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column' }}>
+                <Fragment key={quiz.id}>
+                {cabeceraParcial}
+                <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column' }}>
 
                   <div style={{ marginBottom: '8px' }}>
                     <span style={{ fontSize: '11px', fontWeight: '500', padding: '2px 8px', borderRadius: '6px', background: catStyle.bg, color: catStyle.color }}>
@@ -269,6 +312,7 @@ export default async function Explorar({ searchParams }) {
                     </div>
                   </div>
                 </div>
+                </Fragment>
               )
             })}
           </div>

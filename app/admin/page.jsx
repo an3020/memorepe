@@ -302,11 +302,12 @@ export default async function AdminDashboard() {
             <div>
               <div style={subtitulo}><span>Buscaron y no encontraron</span><Contador n={sinResultado.length} color={C.ambar} /></div>
               {sinResultado.length === 0 ? (
-                <div style={vacio}>Nada todavía. Cuando alguien busque algo sin resultados, aparece acá: es un banco para crear.</div>
+                <div style={vacio}>Nada todavía. Cuando alguien busque algo y ningún banco tenga todas las palabras, aparece acá: es un banco para crear.</div>
               ) : sinResultado.map(b => (
                 <div key={b.q} style={fila}>
                   <div style={{ fontSize: '13px', color: C.texto, ...unaLinea }}>{b.q}</div>
                   <div style={{ fontSize: '11px', color: C.texto3, whiteSpace: 'nowrap' }}>
+                    {b.solo_parcial && <span title="Encontró bancos con algunas palabras, ninguno con todas" style={{ color: C.texto2, marginRight: '6px' }}>solo parciales ·</span>}
                     {b.veces}× · {b.personas} {Number(b.personas) === 1 ? 'persona' : 'personas'}
                   </div>
                 </div>
