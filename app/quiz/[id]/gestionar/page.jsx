@@ -44,6 +44,7 @@ export default function GestionarQuiz({ params }) {
   const [savingQuestion, setSavingQuestion] = useState(false)
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [deletingSelected, setDeletingSelected] = useState(false)
+  const [descargando, setDescargando] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -261,6 +262,66 @@ export default function GestionarQuiz({ params }) {
     setTimeout(() => setMsg(''), 3000)
   }
 
+  // Descarga el banco completo en el mismo formato que acepta el importador CSV
+  // (+ columna id al final, que el importador ignora)
+  async function descargarCSV() {
+    setDescargando(true)
+    try {
+      const todas = []
+      const PAGINA = 1000
+      for (let desde = 0; ; desde += PAGINA) {
+        const { data, error } = await supabase
+          .from('questions').select('id, body, explanation, image_url, options(body, is_correct, order)')
+          .eq('quiz_id', quizId).order('order').order('id').range(desde, desde + PAGINA - 1)
+        if (error) throw error
+        todas.push(...(data || []))
+        if (!data || data.length < PAGINA) break
+      }
+
+      const celda = v => {
+        const t = String(v ?? '').replace(/\r?\n/g, ' ').trim()
+        return t === '' ? '' : '"' + t.replace(/"/g, '""') + '"'
+      }
+      const filas = ['pregunta,opcion1,opcion2,opcion3,opcion4,opcion5,correctas,explicacion,imagen,id']
+      let conMasDe5 = 0
+      for (const q of todas) {
+        const opts = [...(q.options || [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        if (opts.length > 5) conMasDe5++
+        const cinco = opts.slice(0, 5)
+        const correctas = cinco.map((o, i) => o.is_correct ? i + 1 : null).filter(Boolean).join(',')
+        filas.push([
+          celda(q.body),
+          ...[0, 1, 2, 3, 4].map(i => celda(cinco[i]?.body)),
+          celda(correctas),
+          celda(q.explanation),
+          celda(q.image_url),
+          q.id,
+        ].join(','))
+      }
+
+      // BOM para que Excel muestre bien las tildes
+      const blob = new Blob(['\uFEFF' + filas.join('\r\n')], { type: 'text/csv;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      const nombre = (quiz.slug || quiz.title || 'banco').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9-]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase().slice(0, 80)
+      a.href = url
+      a.download = (nombre || 'banco') + '.csv'
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+
+      setMsg('Descargadas ' + todas.length + ' preguntas.' +
+        (conMasDe5 ? ' Atención: ' + conMasDe5 + ' tienen más de 5 opciones y en el CSV quedaron solo las primeras 5.' : ''))
+      setTimeout(() => setMsg(''), conMasDe5 ? 8000 : 3000)
+    } catch (e) {
+      setMsg('No se pudo descargar el CSV. Probá de nuevo.')
+      setTimeout(() => setMsg(''), 4000)
+    }
+    setDescargando(false)
+  }
+
   async function deleteQuiz() {
     await supabase.from('quizzes').delete().eq('id', quizId)
     router.push('/dashboard')
@@ -358,9 +419,14 @@ export default function GestionarQuiz({ params }) {
               {questions.length} preguntas · creado el {quiz.created_at?.slice(0, 10)}
             </p>
           </div>
-          <button onClick={() => setShowDeleteQuiz(true)} style={{ fontSize: '12px', color: '#ef4444', background: 'none', border: '1px solid #fecaca', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer' }}>
-            Eliminar quiz
-          </button>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end', flexShrink: 0 }}>
+            <button onClick={descargarCSV} disabled={descargando || questions.length === 0} title="Mismo formato que el importador CSV" style={{ fontSize: '12px', color: '#065f46', background: 'white', border: '1px solid #6ee7b7', padding: '6px 12px', borderRadius: '8px', cursor: descargando || questions.length === 0 ? 'default' : 'pointer', opacity: questions.length === 0 ? 0.5 : 1, whiteSpace: 'nowrap' }}>
+              {descargando ? 'Descargando…' : '↓ Descargar CSV'}
+            </button>
+            <button onClick={() => setShowDeleteQuiz(true)} style={{ fontSize: '12px', color: '#ef4444', background: 'none', border: '1px solid #fecaca', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              Eliminar quiz
+            </button>
+          </div>
         </div>
 
         {msg && (
