@@ -35,8 +35,8 @@ export async function generateMetadata({ params }) {
   // Título para Google: el título del banco + palabras clave al final.
   // En la interfaz el banco sigue mostrando solo su título.
   const extras = []
-  // "Preguntero" es un término argentino: no se agrega en México ni en Perú (allá es "balotario")
-  const otroPais = /UNAM|CENEVAL|EXANI|IPN|UAM|MTC|Per[uú]|balotario/i.test((quiz.faculty || '') + ' ' + quiz.title)
+  // "Preguntero" es un término argentino: no se agrega en México, Perú (allá es "balotario") ni EE. UU.
+  const otroPais = /UNAM|CENEVAL|EXANI|IPN|UAM|MTC|Per[uú]|balotario|USCIS|ciudadan|citizenship/i.test((quiz.faculty || '') + ' ' + quiz.title)
   if (!otroPais && !/pregunter/i.test(quiz.title)) extras.push('Preguntero')
   if (quiz.faculty && !quiz.title.toLowerCase().includes(quiz.faculty.toLowerCase())) extras.push(quiz.faculty)
   const seoTitle = quiz.title + (extras.length ? ' | ' + extras.join(' ') : '') + ' — Memorepe'
