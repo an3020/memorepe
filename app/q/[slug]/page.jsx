@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { mostrarEstudiando } from '@/lib/estudiando'
+import { bancoIndexable } from '@/lib/seo'
 
 function getLabels(type) {
   const map = {
@@ -28,7 +29,7 @@ export async function generateMetadata({ params }) {
       }
     }
   )
-  const { data: quiz } = await supabase.from('quizzes').select('title, description, notes, subject, faculty, question_count, users(username)').eq('slug', slug).single()
+  const { data: quiz } = await supabase.from('quizzes').select('title, description, notes, subject, faculty, question_count, visibility, users(username)').eq('slug', slug).single()
   if (!quiz) return { title: 'Quiz no encontrado — Memorepe' }
   const desc = quiz.description ||
     `${quiz.question_count} preguntas de ${quiz.subject || 'estudio'}${quiz.faculty ? ' · ' + quiz.faculty : ''}. Estudiá gratis con repetición espaciada en Memorepe.`
@@ -46,6 +47,8 @@ export async function generateMetadata({ params }) {
     title: seoTitle,
     description: desc,
     alternates: { canonical: 'https://memorepe.com/q/' + slug },
+    // Bancos chicos o no públicos: se pueden estudiar, pero no se indexan
+    ...(bancoIndexable(quiz) ? {} : { robots: { index: false, follow: true } }),
     openGraph: {
       title: seoTitle,
       description: desc,

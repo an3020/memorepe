@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase'
 import fs from 'fs'
 import path from 'path'
 import matter from 'gray-matter'
+import { MIN_PREGUNTAS_INDEX } from '@/lib/seo'
 
 export const revalidate = 0 // siempre fresco
 
@@ -11,12 +12,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const { data: quizzes } = await supabase
     .from('quizzes')
-    .select('id, slug, updated_at')
+    .select('id, slug, updated_at, user_id')
     .eq('visibility', 'public')
+    .gte('question_count', MIN_PREGUNTAS_INDEX) // los bancos chicos no se indexan
 
-  const { data: users } = await supabase
+  // Solo perfiles con al menos un banco indexable (los perfiles vacíos no aportan)
+  const autores = new Set((quizzes || []).map(q => q.user_id))
+  const { data: todosUsers } = await supabase
     .from('users')
-    .select('username, created_at')
+    .select('id, username, created_at')
+  const users = (todosUsers || []).filter(u => autores.has(u.id) && u.username)
 
   // Solo quizzes SIN slug (los viejos)
   const quizUrls = quizzes?.filter(q => !q.slug).map(quiz => ({
@@ -34,12 +39,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.9,
   })) || []
 
-  const userUrls = users?.map(user => ({
+  const userUrls = users.map(user => ({
     url: `https://memorepe.com/usuario/${user.username}`,
     lastModified: new Date(user.created_at),
     changeFrequency: 'weekly' as const,
     priority: 0.6,
-  })) || []
+  }))
 
   const postsDir = path.join(process.cwd(), 'app/blog/posts')
   const blogUrls: MetadataRoute.Sitemap = fs.existsSync(postsDir)

@@ -2,6 +2,37 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import ModalQuiz from '@/app/components/ModalQuiz'
 import { mostrarEstudiando } from '@/lib/estudiando'
+import { MIN_PREGUNTAS_INDEX } from '@/lib/seo'
+
+// Perfiles: solo se indexan los que tienen al menos un banco público con contenido
+export async function generateMetadata({ params }) {
+  const { username } = await params
+  const cookieStore = await cookies()
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    { cookies: { getAll() { return cookieStore.getAll() }, setAll() {} } }
+  )
+  const { data: autor } = await supabase.from('users').select('id, username').eq('username', username).single()
+  if (!autor) return { title: 'Usuario no encontrado — Memorepe', robots: { index: false, follow: true } }
+
+  const { count } = await supabase
+    .from('quizzes')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', autor.id)
+    .eq('visibility', 'public')
+    .gte('question_count', MIN_PREGUNTAS_INDEX)
+
+  const titulo = '@' + autor.username + ' — Bancos de preguntas en Memorepe'
+  return {
+    title: titulo,
+    description: count
+      ? 'Bancos de preguntas públicos de @' + autor.username + ' para estudiar gratis con repetición espaciada en Memorepe.'
+      : 'Perfil de @' + autor.username + ' en Memorepe.',
+    alternates: { canonical: 'https://memorepe.com/usuario/' + autor.username },
+    ...(count ? {} : { robots: { index: false, follow: true } }),
+  }
+}
 
 export default async function UsuarioPage({ params, searchParams }) {
   const { username } = await params
