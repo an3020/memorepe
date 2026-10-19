@@ -35,10 +35,11 @@ export async function generateMetadata({ params }) {
   // Título para Google: el título del banco + palabras clave al final.
   // En la interfaz el banco sigue mostrando solo su título.
   const extras = []
-  // "Preguntero" es un término argentino: no se agrega en México, Perú (allá es "balotario") ni EE. UU.
-  const otroPais = /UNAM|CENEVAL|EXANI|IPN|UAM|MTC|Per[uú]|balotario|USCIS|ciudadan|citizenship/i.test((quiz.faculty || '') + ' ' + quiz.title)
+  // "Preguntero" es un término argentino: no se agrega en México, Perú (allá es "balotario"), Panamá ni EE. UU.
+  const otroPais = /UNAM|CENEVAL|EXANI|IPN|UAM|MTC|Per[uú]|balotario|USCIS|ciudadan|citizenship|Panam[aá]|Sertracen|ATTT/i.test((quiz.faculty || '') + ' ' + quiz.title)
   if (!otroPais && !/pregunter/i.test(quiz.title)) extras.push('Preguntero')
-  if (quiz.faculty && !quiz.title.toLowerCase().includes(quiz.faculty.toLowerCase())) extras.push(quiz.faculty)
+  const sinTildes = t => (t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  if (quiz.faculty && !sinTildes(quiz.title).includes(sinTildes(quiz.faculty))) extras.push(quiz.faculty)
   const seoTitle = quiz.title + (extras.length ? ' | ' + extras.join(' ') : '') + ' — Memorepe'
 
   return {
@@ -188,7 +189,7 @@ export default async function QuizSlug({ params }) {
         )}
 
         {quiz.notes && (
-          <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '14px 16px', marginBottom: '24px', fontSize: '14px', color: '#78350f', lineHeight: '1.5' }}>
+          <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '14px 16px', marginBottom: '24px', fontSize: '14px', color: '#78350f', lineHeight: '1.5', whiteSpace: 'pre-line' }}>
             <p style={{ fontSize: '11px', fontWeight: '600', color: '#92400e', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Notas del autor
             </p>
