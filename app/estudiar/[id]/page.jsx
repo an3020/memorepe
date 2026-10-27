@@ -83,7 +83,7 @@ function EstudiarInner({ params }) {
       setQuizId(id)
 
       const nParam = searchParams.get('n')
-      const limite = nParam && nParam !== 'all' ? parseInt(nParam) : null
+      const limite = nParam && nParam !== 'all' && nParam !== 'new' ? parseInt(nParam) : null
       setModoN(nParam)
 
       const { data: { user } } = await supabase.auth.getUser()
@@ -102,7 +102,10 @@ function EstudiarInner({ params }) {
         supabase.from('user_question_progress').select('*').eq('user_id', user.id).in('question_id', ids))
 
       setQuestionsData(qData || [])
-      const queue = buildQueue(qData || [], progressData || [], limite)
+      const seenIds = new Set((progressData || []).map(p => p.question_id))
+      const queue = nParam === 'new'
+        ? buildQueue((qData || []).filter(q => !seenIds.has(q.id)), [], null)
+        : buildQueue(qData || [], progressData || [], limite)
       setQuestions(queue)
 
       const { data: sess } = await supabase
@@ -222,7 +225,7 @@ function EstudiarInner({ params }) {
   }
 
   async function continuar() {
-    const limite = modoN && modoN !== 'all' ? parseInt(modoN) : null
+    const limite = modoN && modoN !== 'all' && modoN !== 'new' ? parseInt(modoN) : null
 
     const questionIds = questionsData.map(q => q.id)
     const { data: progressData } = await inChunks(questionIds, ids =>
@@ -288,11 +291,11 @@ function EstudiarInner({ params }) {
   }
 
   if (loading) return <LoadingScreen />
-  if (questions.length === 0) return <div style={{ padding: '40px', fontFamily: 'Arial', textAlign: 'center', color: '#9ca3af' }}>Este quiz no tiene preguntas todavía.</div>
+  if (questions.length === 0) return <div style={{ padding: '40px', fontFamily: 'Arial', textAlign: 'center', color: '#9ca3af' }}>{modoN === 'new' ? 'Ya viste todas las preguntas de este banco.' : 'Este quiz no tiene preguntas todavía.'}</div>
 
-  const modoNombres = { '10': 'Calentamiento', '30': 'Sesion express', '50': 'Sesion completa', '100': 'Maraton', 'all': 'Repaso total' }
+  const modoNombres = { 'new': 'Solo nuevas', '10': 'Calentamiento', '30': 'Sesion express', '50': 'Sesion completa', '100': 'Maraton', 'all': 'Repaso total' }
   const modoNombre = modoNombres[modoN] || 'Sesion'
-  const limite = modoN && modoN !== 'all' ? parseInt(modoN) : null
+  const limite = modoN && modoN !== 'all' && modoN !== 'new' ? parseInt(modoN) : null
   const allDoneIds = finished ? new Set([...sessionDoneIds, ...questions.map(q => q.id)]) : new Set()
   const remaining = questionsData.filter(q => !allDoneIds.has(q.id))
   const hasMas = remaining.length > 0
